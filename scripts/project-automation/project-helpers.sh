@@ -14,17 +14,17 @@ add_to_project() {
 
   local item_id
   item_id=$(GH_TOKEN="$token" gh api graphql -f query='
-    query {
-      organization(login: "team-thirteen13") {
-        projectV2(number: 1) {
+    query($projectId: ID!) {
+      node(id: $projectId) {
+        ... on ProjectV2 {
           items(first: 100) {
             nodes { id content { ... on Issue { id } } }
           }
         }
       }
     }
-  ' --jq '
-    .data.organization.projectV2.items.nodes[]
+  ' -f projectId="$project_id" --jq '
+    .data.node.items.nodes[]
     | select(.content.id == "'"$issue_node_id"'")
     | .id
   ' 2>/dev/null || echo "")
@@ -50,9 +50,9 @@ get_status() {
   local project_id="$1" item_id="$2" token="$3"
 
   GH_TOKEN="$token" gh api graphql -f query='
-    {
-      organization(login: "team-thirteen13") {
-        projectV2(number: 1) {
+    query($projectId: ID!) {
+      node(id: $projectId) {
+        ... on ProjectV2 {
           items(first: 100) {
             nodes {
               id
@@ -69,8 +69,8 @@ get_status() {
         }
       }
     }
-  ' --jq '
-    [.data.organization.projectV2.items.nodes[]
+  ' -f projectId="$project_id" --jq '
+    [.data.node.items.nodes[]
      | select(.id == "'"$item_id"'")]
     | if length > 0 then
         [. [0].fieldValues.nodes[]
