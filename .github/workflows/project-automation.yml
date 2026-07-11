@@ -1,0 +1,347 @@
+# ─────────────────────────────────────────────────────────────
+# GitHub Projects v2 Automation
+# ─────────────────────────────────────────────────────────────
+# Automates Status transitions on the team-thirteen13/AutoApply
+# project board based on issue, branch, and PR events.
+#
+# Status precedence (prevents backward regression):
+#   Done > In Review > In Progress > To Do > Backlog
+#
+# Tokens:
+#   - secrets.PROJECT_AUTOMATION_TOKEN  → Projects GraphQL (org-level)
+#   - GITHUB_TOKEN                      → Issues, PRs, comments (repo-scoped)
+#
+# Helper functions: .github/scripts/project-helpers.sh
+# ─────────────────────────────────────────────────────────────
+
+name: Project Automation
+
+on:
+  issues:
+    types: [opened, assigned, unassigned, reopened, closed]
+  create:
+  pull_request:
+    types: [opened, ready_for_review, converted_to_draft, closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+env:
+  PROJECT_ID: ${{ vars.PROJECT_ID }}
+  STATUS_FIELD_ID: ${{ vars.PROJECT_STATUS_FIELD_ID }}
+  OPTION_BACKLOG: ${{ vars.PROJECT_OPTION_BACKLOG }}
+  OPTION_TODO: ${{ vars.PROJECT_OPTION_TODO }}
+  OPTION_IN_PROGRESS: ${{ vars.PROJECT_OPTION_IN_PROGRESS }}
+  OPTION_IN_REVIEW: ${{ vars.PROJECT_OPTION_IN_REVIEW }}
+  OPTION_DONE: ${{ vars.PROJECT_OPTION_DONE }}
+
+jobs:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # ISSUE LIFECYCLE
+  # opened       → Backlog
+  # assigned     → 1 assignee: To Do (if Backlog); 2+: warn
+  # unassigned   → 0 assignees: Backlog (if To Do)
+  # reopened     → Inspect linked PR state
+  # closed       → Done
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  issue-lifecycle:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+      TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+    steps:
+      - name: Checkout
+        if: env.TOKEN != ''
+        uses: actions/checkout@v4
+
+      - name: Add issue to project
+        id: add
+        if: env.TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source .github/scripts/project-helpers.sh
+          ITEM_ID=$(add_to_project "$PROJECT_ID" "$ISSUE_NODE_ID" "$TOKEN")
+          echo "ITEM_ID=$ITEM_ID" >> "$GITHUB_OUTPUT"
+
+      # ── opened ──────────────────────────────────────────
+      - name: "Set Backlog on open"
+        if: env.TOKEN != '' && github.event.action == 'opened'
+        run: |
+          source .github/scripts/project-helpers.sh
+          set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
+            "${{ steps.add.outputs.ITEM_ID }}" "$OPTION_BACKLOG" "$TOKEN"
+
+      # ── assigned / unassigned ───────────────────────────
+      - name: "Handle assignee change"
+        if: >
+          env.TOKEN != '' &&
+          (github.event.action == 'assigned' || github.event.action == 'unassigned')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source .github/scripts/project-helpers.sh
+
+          ISSUE_JSON=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUMBER}")
+          ASSIGNEE_COUNT=$(echo "$ISSUE_JSON" | jq '.assignees | length')
+          CURRENT=$(get_status "$PROJECT_ID" "${{ steps.add.outputs.ITEM_ID }}" "$TOKEN")
+
+          echo "Assignees: $ASSIGNEE_COUNT | Status: $CURRENT"
+
+          if [ "$ASSIGNEE_COUNT" -eq 1 ] && [ "$CURRENT" = "$OPTION_BACKLOG" ]; then
+            echo "Single assignee → To Do"
+            set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
+              "${{ steps.add.outputs.ITEM_ID }}" "$OPTION_TODO" "$TOKEN"
+
+          elif [ "$ASSIGNEE_COUNT" -ge 2 ]; then
+            if ! has_comment "${{ github.repository }}" "$ISSUE_NUMBER" \
+                "[PROJECT-AUTOMATION]" "$TOKEN"; then
+              echo "Posting multi-assignee warning"
+              post_comment "${{ github.repository }}" "$ISSUE_NUMBER" \
+                "[PROJECT-AUTOMATION] ℹ️ Each task must have exactly one owner. This issue has $ASSIGNEE_COUNT assignees." \
+                "$TOKEN"
+            fi
+
+          elif [ "$ASSIGNEE_COUNT" -eq 0 ]; then
+            if [ "$CURRENT" = "$OPTION_TODO" ]; then
+              echo "No assignees → Backlog"
+              set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
+                "${{ steps.add.outputs.ITEM_ID }}" "$OPTION_BACKLOG" "$TOKEN"
+            fi
+
+            # Warn if issue is active (To Do, In Progress, or In Review) with no assignees
+            if [ "$CURRENT" = "$OPTION_TODO" ] || \
+               [ "$CURRENT" = "$OPTION_IN_PROGRESS" ] || \
+               [ "$CURRENT" = "$OPTION_IN_REVIEW" ]; then
+              if ! has_comment "${{ github.repository }}" "$ISSUE_NUMBER" \
+                  "[PROJECT-AUTOMATION]" "$TOKEN"; then
+                echo "Posting unassigned warning"
+                post_comment "${{ github.repository }}" "$ISSUE_NUMBER" \
+                  "[PROJECT-AUTOMATION] ⚠️ This issue has no assignees but is in active status ($CURRENT). Each task must have exactly one owner." \
+                  "$TOKEN"
+              fi
+            fi
+          fi
+
+      # ── reopened ────────────────────────────────────────
+      - name: "Handle reopen"
+        if: env.TOKEN != '' && github.event.action == 'reopened'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source .github/scripts/project-helpers.sh
+
+          ISSUE_DATA=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUMBER}")
+          HAS_PR=$(echo "$ISSUE_DATA" | jq '.pull_request | length // 0')
+          ASSIGNEE_COUNT=$(echo "$ISSUE_DATA" | jq '.assignees | length')
+
+          if [ "$HAS_PR" -gt 0 ]; then
+            # Check if linked PR is draft
+            PR_URL=$(echo "$ISSUE_DATA" | jq -r '.pull_request.html_url')
+            PR_DATA=$(gh api "repos/${{ github.repository }}/pulls/$(basename "$PR_URL")" 2>/dev/null || echo "{}")
+            IS_DRAFT=$(echo "$PR_DATA" | jq -r '.draft // false')
+
+            if [ "$IS_DRAFT" = "true" ]; then
+              TARGET="$OPTION_IN_PROGRESS"
+              echo "Reopened with draft PR → In Progress"
+            else
+              TARGET="$OPTION_IN_REVIEW"
+              echo "Reopened with ready PR → In Review"
+            fi
+          elif [ "$ASSIGNEE_COUNT" -gt 0 ]; then
+            TARGET="$OPTION_TODO"
+            echo "Reopened with assignee → To Do"
+          else
+            TARGET="$OPTION_BACKLOG"
+            echo "Reopened, no PR or assignee → Backlog"
+          fi
+
+          set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
+            "${{ steps.add.outputs.ITEM_ID }}" "$TARGET" "$TOKEN"
+
+      # ── closed ──────────────────────────────────────────
+      - name: "Set Done on close"
+        if: env.TOKEN != '' && github.event.action == 'closed'
+        run: |
+          source .github/scripts/project-helpers.sh
+          set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
+            "${{ steps.add.outputs.ITEM_ID }}" "$OPTION_DONE" "$TOKEN"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # BRANCH CREATION
+  # Matches ^(feature|feat|fix|chore|test|docs|refactor)/(\d+)-.
+  # → In Progress (if Backlog or To Do)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  branch-creation:
+    if: github.event_name == 'create' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: ${{ github.event.ref }}
+      TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+    steps:
+      - name: Checkout
+        if: env.TOKEN != ''
+        uses: actions/checkout@v4
+
+      - name: "Match branch to issue"
+        id: match
+        if: env.TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUM=$(echo "$BRANCH_NAME" | sed -nE \
+            's/^(feature|feat|fix|chore|test|docs|refactor)\/([0-9]+)-.*/\2/p')
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "Branch '$BRANCH_NAME' does not match pattern — skipping"
+            exit 0
+          fi
+
+          ISSUE_JSON=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUM}" 2>/dev/null || echo "")
+          if [ -z "$ISSUE_JSON" ] || [ "$(echo "$ISSUE_JSON" | jq -r '.message')" = "Not Found" ]; then
+            echo "Issue #$ISSUE_NUM not found — skipping"
+            exit 0
+          fi
+
+          STATE=$(echo "$ISSUE_JSON" | jq -r '.state')
+          if [ "$STATE" != "open" ]; then
+            echo "Issue #$ISSUE_NUM is $STATE — skipping"
+            exit 0
+          fi
+
+          echo "ISSUE_NODE_ID=$(echo "$ISSUE_JSON" | jq -r '.node_id')" >> "$GITHUB_OUTPUT"
+
+      - name: "Add and set In Progress"
+        if: env.TOKEN != '' && steps.match.outputs.ISSUE_NODE_ID != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NODE_ID: ${{ steps.match.outputs.ISSUE_NODE_ID }}
+        run: |
+          source .github/scripts/project-helpers.sh
+
+          ITEM_ID=$(add_to_project "$PROJECT_ID" "$ISSUE_NODE_ID" "$TOKEN")
+          CURRENT=$(get_status "$PROJECT_ID" "$ITEM_ID" "$TOKEN")
+
+          if [ "$CURRENT" = "$OPTION_BACKLOG" ] || \
+             [ "$CURRENT" = "$OPTION_TODO" ] || \
+             [ -z "$CURRENT" ]; then
+            echo "Setting In Progress (was: ${CURRENT:-none})"
+            set_status "$PROJECT_ID" "$STATUS_FIELD_ID" "$ITEM_ID" "$OPTION_IN_PROGRESS" "$TOKEN"
+          else
+            echo "Status is $CURRENT — no change (prevents regression)"
+          fi
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # PULL REQUEST LIFECYCLE
+  # opened (draft)       → In Progress
+  # opened (ready)       → In Review
+  # ready_for_review     → In Review
+  # converted_to_draft   → In Progress
+  # closed (merged)      → Done
+  # closed (not merged)  → No change
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  pr-lifecycle:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_DRAFT: ${{ github.event.pull_request.draft }}
+      PR_MERGED: ${{ github.event.pull_request.merged }}
+      TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+    steps:
+      - name: Checkout
+        if: env.TOKEN != ''
+        uses: actions/checkout@v4
+
+      - name: "Find linked issue"
+        id: find
+        if: env.TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_NUM=""
+
+          # Priority 1: Closing keywords in PR body
+          if [ -n "$PR_BODY" ]; then
+            ISSUE_NUM=$(echo "$PR_BODY" | grep -ioE '(closes|fixes|resolves)\s+#[0-9]+' \
+              | head -1 | grep -oE '[0-9]+')
+          fi
+
+          # Priority 2: Branch name pattern
+          if [ -z "$ISSUE_NUM" ] && [ -n "$PR_HEAD_REF" ]; then
+            ISSUE_NUM=$(echo "$PR_HEAD_REF" | sed -nE \
+              's/^(feature|feat|fix|chore|test|docs|refactor)\/([0-9]+)-.*/\2/p')
+          fi
+
+          if [ -z "$ISSUE_NUM" ]; then
+            echo "FOUND=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ISSUE_NODE_ID=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUM}" \
+            --jq '.node_id' 2>/dev/null || echo "")
+
+          if [ -z "$ISSUE_NODE_ID" ]; then
+            echo "FOUND=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "ISSUE_NUM=$ISSUE_NUM" >> "$GITHUB_OUTPUT"
+          echo "ISSUE_NODE_ID=$ISSUE_NODE_ID" >> "$GITHUB_OUTPUT"
+          echo "FOUND=true" >> "$GITHUB_OUTPUT"
+
+      - name: "Add to project and determine target"
+        id: prepare
+        if: env.TOKEN != '' && steps.find.outputs.FOUND == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NODE_ID: ${{ steps.find.outputs.ISSUE_NODE_ID }}
+        run: |
+          source .github/scripts/project-helpers.sh
+
+          ITEM_ID=$(add_to_project "$PROJECT_ID" "$ISSUE_NODE_ID" "$TOKEN")
+          CURRENT=$(get_status "$PROJECT_ID" "$ITEM_ID" "$TOKEN")
+
+          echo "ITEM_ID=$ITEM_ID" >> "$GITHUB_OUTPUT"
+          echo "CURRENT=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: "Update status"
+        if: env.TOKEN != '' && steps.find.outputs.FOUND == 'true'
+        run: |
+          source .github/scripts/project-helpers.sh
+
+          ITEM_ID="${{ steps.prepare.outputs.ITEM_ID }}"
+          CURRENT="${{ steps.prepare.outputs.CURRENT }}"
+
+          case "${{ github.event.action }}" in
+            opened)
+              if [ "$PR_DRAFT" = "true" ]; then
+                TARGET="$OPTION_IN_PROGRESS"
+              else
+                TARGET="$OPTION_IN_REVIEW"
+              fi
+              ;;
+            ready_for_review)
+              TARGET="$OPTION_IN_REVIEW"
+              ;;
+            converted_to_draft)
+              TARGET="$OPTION_IN_PROGRESS"
+              ;;
+            closed)
+              if [ "$PR_MERGED" = "true" ]; then
+                TARGET="$OPTION_DONE"
+              else
+                # PR closed without merge — no status change
+                echo "PR closed without merge — status unchanged ($CURRENT)"
+                exit 0
+              fi
+              ;;
+          esac
+
+          echo "Setting status to $TARGET (was: ${CURRENT:-none})"
+          set_status "$PROJECT_ID" "$STATUS_FIELD_ID" "$ITEM_ID" "$TARGET" "$TOKEN"
