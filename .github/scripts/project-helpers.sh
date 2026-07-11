@@ -50,15 +50,18 @@ get_status() {
   local project_id="$1" item_id="$2" token="$3"
 
   GH_TOKEN="$token" gh api graphql -f query='
-    query($projectId: ID!, $itemId: ID!) {
+    {
       organization(login: "team-thirteen13") {
         projectV2(number: 1) {
-          item(id: $itemId) {
-            fieldValues(first: 20) {
-              nodes {
-                ... on ProjectV2ItemFieldSingleSelectValue {
-                  field { ... on ProjectV2SingleSelectField { name } }
-                  optionId
+          items(first: 100) {
+            nodes {
+              id
+              fieldValues(first: 20) {
+                nodes {
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    field { ... on ProjectV2SingleSelectField { name } }
+                    optionId
+                  }
                 }
               }
             }
@@ -66,10 +69,14 @@ get_status() {
         }
       }
     }
-  ' -f projectId="$project_id" -f itemId="$item_id" --jq '
-    [.data.organization.projectV2.item.fieldValues.nodes[]
-     | select(.field.name == "Status")]
-    | if length > 0 then .[0].optionId else "" end
+  ' --jq '
+    [.data.organization.projectV2.items.nodes[]
+     | select(.id == "'"$item_id"'")]
+    | if length > 0 then
+        [. [0].fieldValues.nodes[]
+         | select(.field.name == "Status")]
+        | if length > 0 then .[0].optionId else "" end
+      else "" end
   ' 2>/dev/null || echo ""
 }
 
