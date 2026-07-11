@@ -269,7 +269,7 @@ jobs:
           # Priority 1: Closing keywords in PR body
           if [ -n "$PR_BODY" ]; then
             ISSUE_NUM=$(echo "$PR_BODY" | grep -ioE '(closes|fixes|resolves)\s+#[0-9]+' \
-              | head -1 | grep -oE '[0-9]+')
+              | head -1 | grep -oE '[0-9]+' || true)
           fi
 
           # Priority 2: Branch name pattern
