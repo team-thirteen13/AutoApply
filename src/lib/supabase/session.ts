@@ -12,33 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   AuthenticationRequiredError,
   type AuthUser,
-  type AuthErrorCode,
 } from "@/types/auth";
-
-// ── Map Supabase error codes to our AuthErrorCode ───────────
-// Kept for the auth-operations issue (Phase 5.1).
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function mapSupabaseError(error: string): AuthErrorCode {
-  switch (error) {
-    case "invalid_login_credentials":
-      return "invalid_credentials";
-    case "email_not_confirmed":
-      return "email_not_confirmed";
-    case "weak_password":
-      return "invalid_password";
-    case "invalid_email":
-      return "invalid_email";
-    case "session_not_found":
-      return "session_missing";
-    case "token_expired":
-      return "session_expired";
-    case "user_not_found":
-      return "user_not_found";
-    default:
-      return "unexpected";
-  }
-}
 
 // ── Get authenticated user ──────────────────────────────────
 // Returns the verified user, or null if not authenticated.
