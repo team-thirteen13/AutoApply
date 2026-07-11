@@ -79,14 +79,18 @@ set_status() {
   local project_id="$1" field_id="$2" item_id="$3" option_id="$4" token="$5"
 
   GH_TOKEN="$token" gh api graphql -f query='
-    mutation($projectId: ID!, $fieldId: ID!, $itemId: ID!, $optionId: String!) {
-      updateProjectV2ItemFieldSingleSelect(input: {
-        projectId: $projectId, fieldId: $fieldId,
-        itemId: $itemId, singleSelectOptionId: $optionId
-      }) { projectV2Item { id } }
+    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
+      updateProjectV2ItemFieldValue(input: {
+        projectId: $projectId
+        itemId: $itemId
+        fieldId: $fieldId
+        value: { singleSelectOptionId: $value }
+      }) {
+        projectV2Item { id }
+      }
     }
-  ' -f projectId="$project_id" -f fieldId="$field_id" \
-    -f itemId="$item_id" -f optionId="$option_id" > /dev/null
+  ' -f projectId="$project_id" -f itemId="$item_id" \
+    -f fieldId="$field_id" -f value="$option_id" > /dev/null
 }
 
 # Check if a comment with the given marker already exists.
