@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docker:dev": "docker compose --env-file .env up --build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
