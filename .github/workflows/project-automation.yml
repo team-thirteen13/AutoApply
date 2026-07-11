@@ -11,7 +11,7 @@
 #   - secrets.PROJECT_AUTOMATION_TOKEN  → Projects GraphQL (org-level)
 #   - GITHUB_TOKEN                      → Issues, PRs, comments (repo-scoped)
 #
-# Helper functions: .github/scripts/project-helpers.sh
+# Helper functions: scripts/project-automation/project-helpers.sh
 # ─────────────────────────────────────────────────────────────
 
 name: Project Automation
@@ -63,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
           ITEM_ID=$(add_to_project "$PROJECT_ID" "$ISSUE_NODE_ID" "$TOKEN")
           echo "ITEM_ID=$ITEM_ID" >> "$GITHUB_OUTPUT"
 
@@ -71,7 +71,7 @@ jobs:
       - name: "Set Backlog on open"
         if: env.TOKEN != '' && github.event.action == 'opened'
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
           set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
             "${{ steps.add.outputs.ITEM_ID }}" "$OPTION_BACKLOG" "$TOKEN"
 
@@ -83,7 +83,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
 
           ISSUE_JSON=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUMBER}")
           ASSIGNEE_COUNT=$(echo "$ISSUE_JSON" | jq '.assignees | length')
@@ -132,7 +132,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
 
           ISSUE_DATA=$(gh api "repos/${{ github.repository }}/issues/${ISSUE_NUMBER}")
           HAS_PR=$(echo "$ISSUE_DATA" | jq '.pull_request | length // 0')
@@ -166,7 +166,7 @@ jobs:
       - name: "Set Done on close"
         if: env.TOKEN != '' && github.event.action == 'closed'
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
           set_status "$PROJECT_ID" "$STATUS_FIELD_ID" \
             "${{ steps.add.outputs.ITEM_ID }}" "$OPTION_DONE" "$TOKEN"
 
@@ -220,7 +220,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NODE_ID: ${{ steps.match.outputs.ISSUE_NODE_ID }}
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
 
           ITEM_ID=$(add_to_project "$PROJECT_ID" "$ISSUE_NODE_ID" "$TOKEN")
           CURRENT=$(get_status "$PROJECT_ID" "$ITEM_ID" "$TOKEN")
@@ -302,7 +302,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NODE_ID: ${{ steps.find.outputs.ISSUE_NODE_ID }}
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
 
           ITEM_ID=$(add_to_project "$PROJECT_ID" "$ISSUE_NODE_ID" "$TOKEN")
           CURRENT=$(get_status "$PROJECT_ID" "$ITEM_ID" "$TOKEN")
@@ -313,7 +313,7 @@ jobs:
       - name: "Update status"
         if: env.TOKEN != '' && steps.find.outputs.FOUND == 'true'
         run: |
-          source .github/scripts/project-helpers.sh
+          source scripts/project-automation/project-helpers.sh
 
           ITEM_ID="${{ steps.prepare.outputs.ITEM_ID }}"
           CURRENT="${{ steps.prepare.outputs.CURRENT }}"
