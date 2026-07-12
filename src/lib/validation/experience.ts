@@ -68,3 +68,24 @@ export const createExperienceSchema = z
   );
 
 export type CreateExperienceInput = z.infer<typeof createExperienceSchema>;
+
+// ── Update input validation ─────────────────────────────────
+
+export const updateExperienceSchema = z
+  .object({
+    company: z.string().trim().min(1, "Company is required").max(200).optional(),
+    title: z.string().trim().min(1, "Title is required").max(200).optional(),
+    companyUrl: z.string().trim().url("Invalid URL").max(512).nullable().optional(),
+    startDate: isoDateSchema.optional(),
+    endDate: isoDateSchema.nullable().optional(),
+    isCurrent: z.boolean().optional(),
+    accomplishments: experienceStringArraySchema.optional(),
+    skills: experienceStringArraySchema.optional(),
+  })
+  .strict()
+  .refine(
+    (data) => Object.values(data).some((value) => value !== undefined),
+    { message: "At least one field must be provided" },
+  );
+
+export type UpdateExperienceInput = z.infer<typeof updateExperienceSchema>;
