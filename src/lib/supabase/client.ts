@@ -1,5 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+import { getSupabaseKey } from "./env";
+
 function getEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -10,7 +12,7 @@ function getEnv(name: string): string {
 
 export function createClient() {
   const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabaseKey = getSupabaseKey();
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient(supabaseUrl, supabaseKey);
 }

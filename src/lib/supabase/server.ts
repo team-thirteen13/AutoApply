@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { getSupabaseKey } from "./env";
+
 function getEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -13,9 +15,9 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseAnonKey = getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabaseKey = getSupabaseKey();
 
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
+  return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
