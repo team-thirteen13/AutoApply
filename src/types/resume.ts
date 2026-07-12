@@ -11,44 +11,80 @@
 export interface ResumeSnapshot {
   profile?: {
     name?: string;
+    title?: string;
     email?: string;
     phone?: string;
+    city?: string;
+    country?: string;
+    address?: string;
     location?: string;
     tagline?: string;
     bio?: string;
     githubUrl?: string;
     linkedinUrl?: string;
     portfolioUrl?: string;
+    photoUrl?: string;
   };
+  summary?: string;
   experiences?: Array<{
+    id?: string;
     company: string;
     title: string;
+    employmentType?: string;
+    location?: string;
     startDate: string;
     endDate?: string | null;
     isCurrent?: boolean;
+    description?: string;
     accomplishments?: string[];
     skills?: string[];
   }>;
   projects?: Array<{
+    id?: string;
     title: string;
+    role?: string;
     description?: string;
     technologies?: string[];
+    url?: string;
     liveUrl?: string;
     gitUrl?: string;
+    startDate?: string;
+    endDate?: string | null;
   }>;
   education?: Array<{
+    id?: string;
     university: string;
     degree: string;
+    fieldOfStudy?: string;
+    location?: string;
     startDate: string;
     endDate?: string | null;
+    isCurrent?: boolean;
+    grade?: string;
+    description?: string;
+    achievements?: string[];
   }>;
   certificates?: Array<{
+    id?: string;
     name: string;
+    issuingOrganisation?: string;
     url?: string;
+    credentialId?: string;
     startDate: string;
     endDate?: string | null;
+    doesNotExpire?: boolean;
   }>;
-  skills?: string[];
+  skills?: Array<{
+    id?: string;
+    name: string;
+    category?: string;
+    proficiency?: string;
+  }> | string[];
+  languages?: Array<{
+    id?: string;
+    name: string;
+    proficiency?: string;
+  }>;
 }
 
 // ── Resume ──────────────────────────────────────────────────

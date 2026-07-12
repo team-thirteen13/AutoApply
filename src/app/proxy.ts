@@ -13,7 +13,7 @@ import { createServerClient } from "@supabase/ssr";
 
 // ── Protected routes (require authentication) ───────────────
 
-const protectedRoutes = ["/dashboard"];
+const protectedRoutes = ["/dashboard", "/resumes"];
 
 function isProtectedRoute(pathname: string): boolean {
   return protectedRoutes.some(
