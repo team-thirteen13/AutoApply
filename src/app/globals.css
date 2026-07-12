@@ -12,17 +12,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
 /* ── Print styles ──────────────────────────────────────────── */
@@ -36,40 +29,37 @@ body {
     box-shadow: none !important;
   }
 
+  /* Hide all application chrome when printing */
+  header,
+  nav,
   .print\:hidden {
     display: none !important;
   }
 
   /* Ensure proper page breaks */
-  section {
+  section,
+  .rounded-2xl,
+  .rounded-xl {
     break-inside: avoid;
   }
 
-  /* Remove backgrounds for print */
-  .bg-zinc-50,
-  .bg-white,
-  .bg-zinc-900,
-  .bg-zinc-950,
-  .dark\:bg-zinc-950,
-  .dark\:bg-zinc-900 {
-    background-color: white !important;
+  /* Clean print layout */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   /* Ensure text is visible */
-  .text-zinc-900,
-  .text-zinc-700,
-  .text-zinc-600,
-  .dark\:text-zinc-100,
-  .dark\:text-zinc-300,
-  .dark\:text-zinc-400 {
+  .text-slate-900,
+  .text-slate-700,
+  .text-slate-600,
+  .text-slate-500 {
     color: black !important;
   }
 
-  /* Remove borders for cleaner print */
-  .border-zinc-200,
-  .border-zinc-300,
-  .dark\:border-zinc-700,
-  .dark\:border-zinc-800 {
+  /* Clean borders */
+  .border-slate-200,
+  .border-slate-100 {
     border-color: #e5e5e5 !important;
   }
 }

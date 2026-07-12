@@ -1,13 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "@/lib/supabase/session";
 import { createResume, createVersion } from "@/features/resume";
 
 // ─────────────────────────────────────────────────────────────
 // Create New Resume Page
-// ─────────────────────────────────────────────────────────────
-// Temporary integration UI for creating a new resume.
-// Redirects to edit page after creation.
 // ─────────────────────────────────────────────────────────────
 
 async function createResumeFormAction(formData: FormData): Promise<void> {
@@ -19,13 +15,10 @@ async function createResumeFormAction(formData: FormData): Promise<void> {
   const result = await createResume({ title, targetRole });
 
   if (!result.success) {
-    // For now, redirect back on error. In production, show error state.
     redirect("/resumes/new");
   }
 
-  // Create initial empty version
   await createVersion(result.data.id, {}, { label: "Initial draft" });
-
   redirect(`/resumes/${result.data.id}/edit`);
 }
 
@@ -37,81 +30,70 @@ export default async function NewResumePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-            >
-              ← Back to Dashboard
-            </Link>
-            <h1 className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
+      {/* Simple form for initial creation */}
+      <div className="mx-auto max-w-lg px-4 py-20">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-500/20">
+              <span className="text-xl font-bold text-white">A</span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">
               Create New Resume
             </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Give your resume a title to get started
+            </p>
           </div>
-        </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-8">
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-            Give your resume a title to get started. You can add details after
-            creation.
-          </p>
 
           <form action={createResumeFormAction}>
             <div className="mb-6">
               <label
                 htmlFor="title"
-                className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Resume Title *
+                Resume Title <span className="text-red-500">*</span>
               </label>
               <input
                 id="title"
                 name="title"
                 type="text"
                 required
-                placeholder="e.g. Software Engineer Resume"
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                placeholder="e.g. Senior Software Engineer Resume"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
 
-            <div className="mb-6">
+            <div className="mb-8">
               <label
                 htmlFor="targetRole"
-                className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Target Role (optional)
+                Target Role{" "}
+                <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <input
                 id="targetRole"
                 name="targetRole"
                 type="text"
                 placeholder="e.g. Senior Software Engineer"
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
 
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="rounded-md bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Create Resume
-              </button>
-              <Link
-                href="/dashboard"
-                className="rounded-md border border-zinc-300 px-6 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              >
-                Cancel
-              </Link>
-            </div>
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 hover:brightness-110"
+            >
+              Create Resume
+            </button>
           </form>
+
+          <p className="mt-4 text-center text-xs text-slate-400">
+            ⚠ Temporary integration UI — not the final design
+          </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

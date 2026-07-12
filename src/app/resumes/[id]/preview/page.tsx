@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ArrowLeft, Pencil, Printer, Download } from "lucide-react";
 import type { ResumeSnapshot } from "@/types/resume";
 import { getResumeAction } from "../../actions";
-import { PreviewSections } from "@/features/resume/ui/preview-sections";
+import { ResumePreview } from "@/components/preview/resume-preview";
 
 // ─────────────────────────────────────────────────────────────
 // Resume Preview Page
-// ─────────────────────────────────────────────────────────────
-// Temporary integration UI for previewing a resume.
-// Displays a professional preview with print and export options.
 // ─────────────────────────────────────────────────────────────
 
 export default function PreviewPage() {
@@ -46,21 +44,22 @@ export default function PreviewPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Loading resume...
-        </p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading resume...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950">
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
+        <p className="text-sm text-red-600">{error}</p>
         <Link
           href="/dashboard"
-          className="mt-4 text-sm text-blue-600 hover:underline dark:text-blue-400"
+          className="mt-4 text-sm text-blue-600 hover:underline"
         >
           Back to Dashboard
         </Link>
@@ -69,54 +68,59 @@ export default function PreviewPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900 print:hidden">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl print:hidden">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
             >
-              ← Back to Dashboard
+              <ArrowLeft className="h-4 w-4" />
+              Dashboard
             </Link>
-            <h1 className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              {title}
-            </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              ⚠ Temporary integration UI — Preview
-            </p>
+            <div className="h-6 w-px bg-slate-200" />
+            <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Link
               href={`/resumes/${id}/edit`}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
+              <Pencil className="h-4 w-4" />
               Edit
             </Link>
             <button
-              type="button"
               onClick={() => window.print()}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
-              🖨 Print
+              <Printer className="h-4 w-4" />
+              Print
             </button>
             <button
-              type="button"
               disabled
-              title="PDF export not yet implemented"
-              className="rounded-md border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-400 dark:border-zinc-800 dark:text-zinc-600"
+              title="PDF export coming soon"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed"
             >
-              📄 Export PDF (Coming Soon)
+              <Download className="h-4 w-4" />
+              PDF
+              <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
+                Soon
+              </span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-8">
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 print:border-0 print:shadow-none">
-          <PreviewSections snapshot={snapshot ?? {}} />
-        </div>
+      {/* Preview */}
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 print:px-0 print:py-0">
+        <ResumePreview snapshot={snapshot ?? {}} />
       </main>
+
+      <p className="pb-8 text-center text-xs text-slate-400 print:hidden">
+        ⚠ Temporary integration UI — Preview
+      </p>
     </div>
   );
 }
