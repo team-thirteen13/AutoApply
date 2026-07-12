@@ -36,9 +36,15 @@ export async function exchangeOAuthCode(
   );
 
   if (error) {
+    const code = mapAuthErrorCode(error);
+    // Hide internal Supabase error details for OAuth failures
+    const message =
+      code === "oauth_failed"
+        ? "OAuth authentication failed"
+        : error.message;
     return {
       success: false,
-      error: { code: mapAuthErrorCode(error), message: error.message },
+      error: { code, message },
     };
   }
 

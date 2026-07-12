@@ -27,6 +27,7 @@ const CODE_MAP: Record<string, AuthErrorCode> = {
   flow_state_expired: "oauth_failed",
   flow_state_not_found: "oauth_failed",
   oauth_provider_not_supported: "oauth_failed",
+  pkce_code_verifier_not_found: "oauth_failed",
 };
 
 export function mapAuthErrorCode(error: { code?: string }): AuthErrorCode {
