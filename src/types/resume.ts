@@ -11,6 +11,7 @@
 export interface ResumeSnapshot {
   profile?: {
     name?: string;
+    title?: string;
     email?: string;
     phone?: string;
     location?: string;
@@ -23,9 +24,11 @@ export interface ResumeSnapshot {
   experiences?: Array<{
     company: string;
     title: string;
+    location?: string;
     startDate: string;
     endDate?: string | null;
     isCurrent?: boolean;
+    description?: string;
     accomplishments?: string[];
     skills?: string[];
   }>;
@@ -33,22 +36,29 @@ export interface ResumeSnapshot {
     title: string;
     description?: string;
     technologies?: string[];
+    url?: string;
     liveUrl?: string;
     gitUrl?: string;
   }>;
   education?: Array<{
     university: string;
     degree: string;
+    fieldOfStudy?: string;
     startDate: string;
     endDate?: string | null;
+    description?: string;
   }>;
   certificates?: Array<{
     name: string;
+    issuingOrganisation?: string;
     url?: string;
     startDate: string;
     endDate?: string | null;
   }>;
-  skills?: string[];
+  skills?: Array<{
+    name: string;
+    category?: string;
+  }> | string[];
 }
 
 // ── Resume ──────────────────────────────────────────────────

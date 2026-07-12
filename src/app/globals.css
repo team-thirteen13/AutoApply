@@ -24,3 +24,52 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Print styles ──────────────────────────────────────────── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Ensure proper page breaks */
+  section {
+    break-inside: avoid;
+  }
+
+  /* Remove backgrounds for print */
+  .bg-zinc-50,
+  .bg-white,
+  .bg-zinc-900,
+  .bg-zinc-950,
+  .dark\:bg-zinc-950,
+  .dark\:bg-zinc-900 {
+    background-color: white !important;
+  }
+
+  /* Ensure text is visible */
+  .text-zinc-900,
+  .text-zinc-700,
+  .text-zinc-600,
+  .dark\:text-zinc-100,
+  .dark\:text-zinc-300,
+  .dark\:text-zinc-400 {
+    color: black !important;
+  }
+
+  /* Remove borders for cleaner print */
+  .border-zinc-200,
+  .border-zinc-300,
+  .dark\:border-zinc-700,
+  .dark\:border-zinc-800 {
+    border-color: #e5e5e5 !important;
+  }
+}
