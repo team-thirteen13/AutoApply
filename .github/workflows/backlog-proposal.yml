@@ -1,0 +1,323 @@
+# ─────────────────────────────────────────────────────────────
+# Backlog Proposal
+# ─────────────────────────────────────────────────────────────
+# Scans the repository for unfinished work and creates a
+# single GitHub issue containing a structured proposal table.
+#
+# Does NOT create individual issues, assign anyone, or modify code.
+#
+# IMPORTANT: workflow_dispatch requires this file to exist on
+# the default branch (main). It cannot be triggered from an
+# unmerged feature branch. Merge to main first, then trigger
+# manually from Actions → Backlog Proposal → Run workflow.
+#
+# Token: GITHUB_TOKEN (issues: write only)
+# ─────────────────────────────────────────────────────────────
+
+name: Backlog Proposal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan and propose
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          TODAY=$(date -u +%Y-%m-%d)
+          REPO="${{ github.repository }}"
+          TABLE_ROWS=""
+          ROW_NUM=0
+          SKIPPED=""
+
+          # ── Helper: add a row ────────────────────────────────
+          add_row() {
+            local title="$1" desc="$2" criteria="$3" priority="$4" dep="$5" evidence="$6"
+            if [ "$ROW_NUM" -ge "$MAX_ITEMS" ]; then
+              echo "Cap reached (${MAX_ITEMS} items). Skipping: ${title}"
+              return
+            fi
+            ROW_NUM=$((ROW_NUM + 1))
+            TABLE_ROWS+="| ${ROW_NUM} | ${title} | ${desc} | ${criteria} | ${priority} | ${dep} | ${evidence} |"$'\n'
+          }
+
+          # ── Helper: check for duplicate issue ────────────────
+          is_duplicate() {
+            local title_lower
+            title_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+            # Extract keywords (words ≥4 chars)
+            local keywords
+            keywords=$(echo "$title_lower" | grep -oE '\b[a-z]{4,}\b' | head -5)
+            local match_count=0
+            while IFS= read -r kw; do
+              [ -z "$kw" ] && continue
+              if echo "$EXISTING_ISSUES" | grep -qi "$kw"; then
+                match_count=$((match_count + 1))
+              fi
+            done <<< "$keywords"
+            # Duplicate if ≥2 keywords match
+            [ "$match_count" -ge 2 ]
+          }
+
+          # ── Exclusion patterns (skip generated/vendored dirs) ─
+          EXCLUDE_GREP="--exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.git --exclude-dir=.claude --exclude-dir=dist --exclude-dir=build --exclude-dir=.agents"
+          EXCLUDE_FIND="-not -path '*/node_modules/*' -not -path '*/.next/*' -not -path '*/.git/*' -not -path '*/.claude/*' -not -path '*/dist/*' -not -path '*/build/*' -not -path '*/.agents/*'"
+          MAX_ITEMS=15
+
+          # ── Fetch existing issues for dedup ──────────────────
+          EXISTING_ISSUES=$(gh issue list --repo "$REPO" --state all --json title --jq '.[].title' 2>/dev/null || echo "")
+          echo "Existing issues: $(echo "$EXISTING_ISSUES" | wc -l | tr -d ' ')"
+
+          # ══════════════════════════════════════════════════════
+          # 1. TODO / FIXME / HACK / XXX SCAN
+          # ══════════════════════════════════════════════════════
+          echo "── Scanning for TODO/FIXME/HACK/XXX ──"
+          TODOS=$(grep -rn $EXCLUDE_GREP \
+            --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
+            --include='*.sql' --include='*.md' \
+            -E '(TODO|FIXME|HACK|XXX)' \
+            src/ supabase/ .github/ 2>/dev/null \
+            | grep -v 'OPTION_TODO' \
+            | grep -v 'PROJECT_OPTION_TODO' \
+            || true)
+
+          if [ -n "$TODOS" ]; then
+            while IFS= read -r line; do
+              file=$(echo "$line" | cut -d: -f1)
+              num=$(echo "$line" | cut -d: -f2)
+              content=$(echo "$line" | cut -d: -f3- | sed 's/^[[:space:]]*//' | head -c 80)
+              title="Fix: ${content}"
+              if ! is_duplicate "$title"; then
+                add_row "$title" "Found in \`${file}:${num}\`" "Comment addressed or removed" "Medium" "None" "\`${file}:${num}\`"
+              else
+                SKIPPED+="- ${title} (duplicate)"$'\n'
+              fi
+            done <<< "$TODOS"
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # 2. MISSING TEST INFRASTRUCTURE
+          # ══════════════════════════════════════════════════════
+          echo "── Checking test infrastructure ──"
+          if [ ! -f "package.json" ] || ! grep -q '"test"' package.json; then
+            title="Add test runner configuration"
+            if ! is_duplicate "$title"; then
+              add_row "$title" \
+                "No \`test\` script in package.json. Add Vitest or Jest config for unit/integration tests." \
+                "\`npm run test\` exits 0; CI workflow runs tests" \
+                "High" \
+                "None" \
+                "package.json has no test script; CI workflow has no test step"
+            fi
+          fi
+
+          TS_FILES=$(find src $EXCLUDE_FIND \( -name '*.ts' -o -name '*.tsx' \) 2>/dev/null | wc -l | tr -d ' ')
+          TEST_FILES=$(find src $EXCLUDE_FIND \( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.spec.ts' \) 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$TS_FILES" -gt 0 ] && [ "$TEST_FILES" -eq 0 ]; then
+            title="Add unit tests for existing source files"
+            if ! is_duplicate "$title"; then
+              add_row "$title" \
+                "Found ${TS_FILES} TS/TSX files with 0 test files. Add co-located tests." \
+                "At least 1 test file per feature module; \`npm run test\` passes" \
+                "High" \
+                "Add test runner configuration" \
+                "0 test files found in src/"
+            fi
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # 3. ARCHITECTURE GAPS (from CLAUDE.md planned structure)
+          # ══════════════════════════════════════════════════════
+          echo "── Checking architecture gaps ──"
+          declare -A PLANNED_DIRS=(
+            ["src/components"]="Shared UI components"
+            ["src/features/auth"]="Auth feature module"
+            ["src/features/profile"]="Profile feature module"
+            ["src/features/resume"]="Resume feature module"
+            ["src/lib/validation"]="Zod validation schemas"
+            ["src/lib/ai"]="AI provider interface"
+            ["src/services"]="Business logic / data access"
+            ["src/types"]="Shared TypeScript types"
+            ["src/utils"]="Utility functions"
+          )
+
+          for dir in "${!PLANNED_DIRS[@]}"; do
+            if [ ! -d "$dir" ]; then
+              desc="${PLANNED_DIRS[$dir]}"
+              title="Create ${dir} directory"
+              if ! is_duplicate "$title"; then
+                add_row "$title" \
+                  "Planned directory missing. Set up with index files and initial types." \
+                  "Directory exists with exports; imports resolve" \
+                  "Medium" \
+                  "None" \
+                  "Directory \`${dir}\` does not exist (per CLAUDE.md architecture)"
+              fi
+            fi
+          done
+
+          # ══════════════════════════════════════════════════════
+          # 4. ROADMAP PHASES (parse AutoApply_Member1_GSD_Roadmap.md)
+          # ══════════════════════════════════════════════════════
+          echo "── Parsing roadmap for unstarted phases ──"
+          ROADMAP="AutoApply_Member1_GSD_Roadmap.md"
+          if [ -f "$ROADMAP" ]; then
+            # Extract lines with phase info and NOT STARTED status
+            PHASES=$(grep -E '(Phase [0-9]+\.[0-9]+|NOT STARTED)' "$ROADMAP" || true)
+
+            CURRENT_PHASE=""
+            while IFS= read -r line; do
+              # Match phase header
+              if echo "$line" | grep -qE 'Phase [0-9]+\.[0-9]+'; then
+                CURRENT_PHASE=$(echo "$line" | grep -oE 'Phase [0-9]+\.[0-9]+' | head -1)
+                CURRENT_TITLE=$(echo "$line" | sed 's/.*Phase [0-9]\+\.[0-9]\+ *— *//' | sed 's/`//g' | head -c 60)
+              fi
+              # Match NOT STARTED
+              if echo "$line" | grep -q 'NOT STARTED' && [ -n "$CURRENT_PHASE" ]; then
+                title="${CURRENT_PHASE}: ${CURRENT_TITLE}"
+                if ! is_duplicate "$title"; then
+                  # Determine priority
+                  prio="Medium"
+                  if echo "$CURRENT_PHASE" | grep -qE '^Phase 5'; then
+                    prio="High"
+                  fi
+
+                  # Determine dependency
+                  dep="None"
+                  phase_num=$(echo "$CURRENT_PHASE" | grep -oE '[0-9]+\.[0-9]+')
+                  major=$(echo "$phase_num" | cut -d. -f1)
+                  minor=$(echo "$phase_num" | cut -d. -f2)
+                  if [ "$minor" -gt 1 ]; then
+                    prev_minor=$((minor - 1))
+                    dep="Phase ${major}.${prev_minor}"
+                  elif [ "$major" -gt 0 ]; then
+                    prev_major=$((major - 1))
+                    dep="Phase ${prev_major}.last"
+                  fi
+
+                  add_row "$title" \
+                    "Roadmap phase not yet started. [planned, not verified from implementation]" \
+                    "Phase completed per roadmap acceptance criteria" \
+                    "$prio" \
+                    "$dep" \
+                    "\`${ROADMAP}\` — ${CURRENT_PHASE} NOT STARTED"
+                fi
+                CURRENT_PHASE=""
+              fi
+            done <<< "$PHASES"
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # 5. STALE BRANCHES
+          # ══════════════════════════════════════════════════════
+          echo "── Checking stale branches ──"
+          MERGED_PRS=$(gh pr list --repo "$REPO" --state merged --json headRefName --jq '.[].headRefName' 2>/dev/null || echo "")
+          ALL_BRANCHES=$(git branch -r --nomerged 2>/dev/null | grep -v 'origin/main' | sed 's|origin/||' | tr -d ' ' || true)
+
+          while IFS= read -r branch; do
+            [ -z "$branch" ] && continue
+            # Skip if branch has a merged PR
+            if echo "$MERGED_PRS" | grep -qF "$branch"; then
+              continue
+            fi
+            # Skip non-feature branches
+            if ! echo "$branch" | grep -qE '^(feat|fix|chore|test|docs|refactor)/'; then
+              continue
+            fi
+            title="Clean up stale branch: ${branch}"
+            if ! is_duplicate "$title"; then
+              add_row "$title" \
+                "Branch has no merged PR and may contain abandoned work." \
+                "Branch deleted or PR created/merged" \
+                "Low" \
+                "None" \
+                "Branch \`${branch}\` exists with no merged PR"
+            fi
+          done <<< "$ALL_BRANCHES"
+
+          # ══════════════════════════════════════════════════════
+          # 6. DEFAULT BOILERPLATE
+          # ══════════════════════════════════════════════════════
+          echo "── Checking boilerplate ──"
+          if [ -f "src/app/page.tsx" ]; then
+            if grep -q "Get started by editing" src/app/page.tsx 2>/dev/null || \
+               grep -q "Vercel" src/app/page.tsx 2>/dev/null; then
+              title="Replace default Next.js boilerplate page"
+              if ! is_duplicate "$title"; then
+                add_row "$title" \
+                  "src/app/page.tsx still contains the default Next.js landing page." \
+                  "Custom landing page or app entry point replaces boilerplate" \
+                  "Low" \
+                  "None" \
+                  "src/app/page.tsx contains default Next.js content"
+              fi
+            fi
+          fi
+
+          if grep -q "Create Next App" src/app/layout.tsx 2>/dev/null; then
+            title="Update layout.tsx metadata"
+            if ! is_duplicate "$title"; then
+              add_row "$title" \
+                "Root layout still says 'Create Next App' in metadata." \
+                "Metadata title/description reflect AutoApply" \
+                "Low" \
+                "None" \
+                "src/app/layout.tsx contains 'Create Next App'"
+            fi
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # BUILD ISSUE BODY
+          # ══════════════════════════════════════════════════════
+          echo "── Building issue ──"
+
+          if [ -z "$TABLE_ROWS" ]; then
+            echo "No proposals found. Skipping issue creation."
+            exit 0
+          fi
+
+          BODY="# Backlog proposal: ${TODAY}"$'\n'
+          BODY+=""$'\n'
+          BODY+="> Auto-generated by backlog-proposal workflow. Review, edit, and split into individual issues as needed."$'\n'
+          BODY+="> Items labeled \"[planned, not verified]\" are derived from the roadmap and have not been checked against the codebase."$'\n'
+          BODY+="> Maximum ${MAX_ITEMS} items per proposal. Re-run after addressing items to see remaining work."$'\n'
+          BODY+=""$'\n'
+          BODY+="| # | Title | Description | Acceptance Criteria | Priority | Dependency | Evidence |"$'\n'
+          BODY+="|---|-------|-------------|--------------------|----------|------------|----------|"$'\n'
+          BODY+="${TABLE_ROWS}"
+
+          if [ -n "$SKIPPED" ]; then
+            BODY+=""$'\n'
+            BODY+="## Skipped (duplicates)"$'\n'
+            BODY+="$SKIPPED"
+          fi
+
+          BODY+=""$'\n'
+          BODY+="---"$'\n'
+          BODY+="*Run this workflow again after addressing items to see remaining work.*"
+
+          # Ensure "proposal" label exists
+          gh label create "proposal" --repo "$REPO" --description "Auto-generated backlog proposal" --color "D4C5F9" 2>/dev/null || true
+
+          # Create the issue
+          ISSUE_URL=$(gh issue create \
+            --repo "$REPO" \
+            --title "Backlog proposal: ${TODAY}" \
+            --body "$BODY" \
+            --label "proposal" \
+            2>&1)
+
+          echo "Created: ${ISSUE_URL}"
