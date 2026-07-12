@@ -33,11 +33,11 @@ npm ci
 npx supabase start
 ```
 
-Copy the local Supabase URL and anon key from the CLI output into your `.env` file:
+Copy the local Supabase URL and publishable key from the CLI output into your `.env` file:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-publishable-key>
 ```
 
 Then start the dev server:
@@ -74,7 +74,7 @@ npm run docker:dev
 | Host (npm dev) | `http://127.0.0.1:54321` |
 | Docker container | `http://host.docker.internal:54321` (set in compose.yaml) |
 
-The `NEXT_PUBLIC_SUPABASE_ANON_KEY` is passed from your `.env` file in both cases.
+The `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is passed from your `.env` file in both cases.
 
 ## Scripts
 
