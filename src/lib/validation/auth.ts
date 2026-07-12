@@ -22,3 +22,37 @@ export const signInSchema = z.object({
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
+
+// ── OAuth schemas ─────────────────────────────────────────
+
+export const startOAuthSchema = z.object({
+  nextPath: z
+    .string()
+    .default("/")
+    .refine(
+      (val) => val.startsWith("/") && !val.startsWith("//"),
+      "Redirect must be an application-relative path",
+    )
+    .refine(
+      (val) => !/[?#\\]/.test(val) && !/^[a-zA-Z]+:/.test(val),
+      "Redirect must not contain a scheme, query string, fragment, or backslash",
+    )
+    .refine(
+      (val) => !/[\x00-\x1f\x7f]/.test(val),
+      "Redirect must not contain control characters",
+    )
+    .refine(
+      (val) => val.length <= 512,
+      "Redirect path too long",
+    ),
+});
+
+export const exchangeCodeSchema = z.object({
+  code: z
+    .string()
+    .min(1, "Authorization code is required")
+    .max(1024, "Authorization code too long"),
+});
+
+export type StartOAuthInput = z.infer<typeof startOAuthSchema>;
+export type ExchangeCodeInput = z.infer<typeof exchangeCodeSchema>;

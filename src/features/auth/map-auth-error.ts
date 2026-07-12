@@ -21,6 +21,12 @@ const CODE_MAP: Record<string, AuthErrorCode> = {
   session_not_found: "session_missing",
   session_expired: "session_expired",
   user_not_found: "user_not_found",
+  bad_code_verifier: "oauth_failed",
+  bad_oauth_callback: "oauth_failed",
+  bad_oauth_state: "oauth_failed",
+  flow_state_expired: "oauth_failed",
+  flow_state_not_found: "oauth_failed",
+  oauth_provider_not_supported: "oauth_failed",
 };
 
 export function mapAuthErrorCode(error: { code?: string }): AuthErrorCode {

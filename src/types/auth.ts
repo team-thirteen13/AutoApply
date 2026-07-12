@@ -35,6 +35,8 @@ export type AuthErrorCode =
   | "rate_limited"
   | "email_exists"
   | "weak_password"
+  | "invalid_redirect"
+  | "oauth_failed"
   | "unexpected";
 
 // ── Generic result type ─────────────────────────────────────
