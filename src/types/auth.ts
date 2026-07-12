@@ -32,6 +32,9 @@ export type AuthErrorCode =
   | "user_not_found"
   | "session_expired"
   | "session_missing"
+  | "rate_limited"
+  | "email_exists"
+  | "weak_password"
   | "unexpected";
 
 // ── Generic result type ─────────────────────────────────────
