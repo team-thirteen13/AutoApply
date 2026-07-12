@@ -1,18 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
-
-import { getSupabaseKey } from "./env";
-
-function getEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-  return value;
-}
+import { env } from "@/lib/env";
 
 export function createClient() {
-  const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseKey = getSupabaseKey();
-
-  return createBrowserClient(supabaseUrl, supabaseKey);
+  return createBrowserClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 }
