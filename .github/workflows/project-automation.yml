@@ -236,10 +236,9 @@ jobs:
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # PULL REQUEST LIFECYCLE
-  # opened (draft)       → In Progress
-  # opened (ready)       → In Review
-  # ready_for_review     → In Review
-  # converted_to_draft   → In Progress
+  # opened (any)         → In Review
+  # ready_for_review     → No change (already In Review)
+  # converted_to_draft   → No change (already In Review)
   # closed (merged)      → Done
   # closed (not merged)  → No change
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -320,17 +319,18 @@ jobs:
 
           case "${{ github.event.action }}" in
             opened)
-              if [ "$PR_DRAFT" = "true" ]; then
-                TARGET="$OPTION_IN_PROGRESS"
-              else
-                TARGET="$OPTION_IN_REVIEW"
-              fi
-              ;;
-            ready_for_review)
+              # Any opened PR (draft or ready) → In Review
               TARGET="$OPTION_IN_REVIEW"
               ;;
+            ready_for_review)
+              # Already In Review — no change needed
+              echo "PR marked ready for review — status unchanged ($CURRENT)"
+              exit 0
+              ;;
             converted_to_draft)
-              TARGET="$OPTION_IN_PROGRESS"
+              # Keep In Review — draft PRs are still in review
+              echo "PR converted to draft — status unchanged ($CURRENT)"
+              exit 0
               ;;
             closed)
               if [ "$PR_MERGED" = "true" ]; then
