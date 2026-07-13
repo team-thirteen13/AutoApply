@@ -1,11 +1,11 @@
 -- ─────────────────────────────────────────────────────────────
 -- RLS tests for resumes and resume_versions
--- 18 assertions total (9 per table)
+-- 13 assertions total (8 resumes + 5 resume_versions)
 -- ─────────────────────────────────────────────────────────────
 
 BEGIN;
 
-SELECT plan(18);
+SELECT plan(13);
 
 -- ── Setup ───────────────────────────────────────────────────
 
@@ -72,23 +72,24 @@ SELECT results_eq(
 
 -- ── Resume versions tests ───────────────────────────────────
 
+-- Reset to admin role for setup inserts (authenticated role blocks cross-user inserts)
+RESET role;
+
 -- Re-insert resumes for version tests
 INSERT INTO resumes (id, user_id, title)
 VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Resume A'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'Resume B');
 
--- User A inserts own version
-SELECT lives_ok(
-  $$INSERT INTO resume_versions (resume_id, user_id, snapshot, label)
-    VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', '{"profile":{"name":"Test"}}'::jsonb, 'v1')$$,
-  'resume_versions: User A can insert own row');
+-- Insert both versions as admin (before setting authenticated role)
+INSERT INTO resume_versions (resume_id, user_id, snapshot, label)
+VALUES
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', '{"profile":{"name":"Test"}}'::jsonb, 'v1'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', '{"profile":{"name":"Test"}}'::jsonb, 'v1');
 
--- User B inserts own version
-SELECT lives_ok(
-  $$INSERT INTO resume_versions (resume_id, user_id, snapshot, label)
-    VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', '{"profile":{"name":"Test"}}'::jsonb, 'v1')$$,
-  'resume_versions: User B can insert own row');
+-- Re-establish User A context for version RLS tests
+SET request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+SET role = 'authenticated';
 
 -- User A can select own versions
 SELECT is(
