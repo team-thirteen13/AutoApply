@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import {
   createResume,
   getResume,
@@ -8,6 +8,8 @@ import {
   updateResume,
   createVersion,
   listVersions,
+  deleteResume,
+  INITIAL_SNAPSHOT,
 } from "@/features/resume";
 import { getProfile } from "@/features/profile/get-profile";
 import { MockAIProvider } from "@/lib/ai";
@@ -23,6 +25,12 @@ import type { ResumeSnapshot } from "@/types/resume";
 
 const aiProvider = new MockAIProvider();
 
+// ── Create-resume result type ──────────────────────────────
+
+export type CreateResumeResult =
+  | { success: true; resumeId: string }
+  | { success: false; error: string; fieldErrors?: { title?: string } };
+
 // ── List resumes ────────────────────────────────────────────
 
 export async function listResumesAction() {
@@ -31,28 +39,68 @@ export async function listResumesAction() {
 
 // ── Create resume ───────────────────────────────────────────
 
-export async function createResumeAction(formData: FormData) {
-  const title = formData.get("title") as string;
-  const targetRole = (formData.get("targetRole") as string) || null;
-
-  const result = await createResume({ title, targetRole });
-
-  if (!result.success) {
-    return result;
+export async function createResumeAction(
+  title: string,
+  targetRole?: string | null,
+): Promise<CreateResumeResult> {
+  // Validate title at action boundary
+  const trimmedTitle = title?.trim();
+  if (!trimmedTitle) {
+    return {
+      success: false,
+      error: "Title is required",
+      fieldErrors: { title: "Title is required" },
+    };
   }
 
-  // Create initial empty version
-  const snapshot: ResumeSnapshot = {};
-  const versionResult = await createVersion(result.data.id, snapshot, {
-    label: "Initial draft",
+  if (trimmedTitle.length > 200) {
+    return {
+      success: false,
+      error: "Title is too long",
+      fieldErrors: { title: "Title must be 200 characters or less" },
+    };
+  }
+
+  // Create the resume record
+  const result = await createResume({
+    title: trimmedTitle,
+    targetRole: targetRole || null,
   });
 
-  if (!versionResult.success) {
-    // Resume created but version failed - still return success
-    // The resume exists and can be edited
+  if (!result.success) {
+    const message =
+      result.error.code === "authentication_required"
+        ? "You must be signed in to create a resume"
+        : "Failed to create resume. Please try again.";
+    return { success: false, error: message };
   }
 
-  redirect(`/resumes/${result.data.id}/edit`);
+  // Create initial version with valid snapshot
+  const versionResult = await createVersion(
+    result.data.id,
+    INITIAL_SNAPSHOT,
+    { label: "Initial draft" },
+  );
+
+  if (!versionResult.success) {
+    // Compensation: delete the orphaned resume since the user
+    // cannot use it without an initial version.
+    await deleteResume(result.data.id).catch(() => {
+      // Best-effort cleanup — if delete also fails, the resume
+      // will be an orphan but won't cause data corruption.
+    });
+
+    return {
+      success: false,
+      error: "Failed to initialize resume. Please try again.",
+    };
+  }
+
+  // Revalidate dashboard so the new resume appears
+  revalidatePath("/dashboard");
+
+  // Return success — client handles navigation
+  return { success: true, resumeId: result.data.id };
 }
 
 // ── Get resume with versions ────────────────────────────────

@@ -7,3 +7,4 @@ export { createVersion } from "./create-version";
 export { listVersions } from "./list-versions";
 export { getVersion } from "./get-version";
 export { deleteVersion } from "./delete-version";
+export { INITIAL_SNAPSHOT } from "./initial-snapshot";
