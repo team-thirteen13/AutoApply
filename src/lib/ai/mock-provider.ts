@@ -15,7 +15,10 @@ import type {
   ImproveExperienceOutput,
   ImproveSkillsInput,
   ImproveSkillsOutput,
+  GenerateResumeInput,
+  GenerateResumeOutput,
 } from "./types";
+import type { ResumeSnapshot } from "@/types/resume";
 
 export class MockAIProvider implements AIProvider {
   readonly name = "mock";
@@ -110,6 +113,107 @@ export class MockAIProvider implements AIProvider {
       data: { skills: improved },
       provider: this.name,
       note: `Deduplicated and sorted ${skills.length} skills → ${improved.length} unique`,
+    };
+  }
+
+  async generateResume(
+    input: GenerateResumeInput,
+  ): Promise<AIResult<GenerateResumeOutput>> {
+    const { profile, experiences, education, projects, certificates, skills, targetRole } = input;
+
+    // Build profile section
+    const profileSection = profile
+      ? {
+          name: profile.name,
+          title: profile.title,
+          email: profile.email,
+          phone: profile.phone,
+          city: profile.city,
+          country: profile.country,
+          bio: profile.bio,
+          githubUrl: profile.githubUrl,
+          linkedinUrl: profile.linkedinUrl,
+          portfolioUrl: profile.portfolioUrl,
+        }
+      : undefined;
+
+    // Build summary from profile bio or generate template
+    let summary: string | undefined;
+    if (profile?.bio?.trim()) {
+      summary = profile.bio;
+    } else {
+      const role = targetRole ?? profile?.title ?? "professional";
+      summary = `Results-driven ${role} with experience in building scalable applications and collaborative team environments.`;
+    }
+
+    // Map experiences, preserving source facts
+    const experienceSection = experiences?.map((exp) => ({
+      company: exp.company,
+      title: exp.title,
+      startDate: exp.startDate,
+      endDate: exp.endDate,
+      isCurrent: exp.isCurrent,
+      description: exp.description,
+      accomplishments: exp.accomplishments ?? [],
+      skills: exp.skills ?? [],
+    }));
+
+    // Map education, preserving source facts
+    const educationSection = education?.map((edu) => ({
+      university: edu.university,
+      degree: edu.degree,
+      fieldOfStudy: edu.fieldOfStudy,
+      startDate: edu.startDate,
+      endDate: edu.endDate,
+      isCurrent: edu.isCurrent,
+      grade: edu.grade,
+      description: edu.description,
+    }));
+
+    // Map projects, preserving source facts
+    const projectSection = projects?.map((proj) => ({
+      title: proj.title,
+      description: proj.description,
+      technologies: proj.technologies ?? [],
+      url: proj.url,
+      liveUrl: proj.liveUrl,
+      gitUrl: proj.gitUrl,
+      startDate: proj.startDate,
+      endDate: proj.endDate,
+    }));
+
+    // Map certificates, preserving source facts
+    const certificateSection = certificates?.map((cert) => ({
+      name: cert.name,
+      issuingOrganisation: cert.issuingOrganisation,
+      url: cert.url,
+      credentialId: cert.credentialId,
+      startDate: cert.startDate,
+      endDate: cert.endDate,
+      doesNotExpire: cert.doesNotExpire,
+    }));
+
+    // Deduplicate and sort skills
+    const skillSection = skills
+      ? [...new Set(skills.map((s) => s.trim()).filter(Boolean))].sort(
+          (a, b) => a.localeCompare(b),
+        )
+      : undefined;
+
+    const snapshot: ResumeSnapshot = {
+      profile: profileSection,
+      summary,
+      experiences: experienceSection,
+      education: educationSection,
+      projects: projectSection,
+      certificates: certificateSection,
+      skills: skillSection,
+    };
+
+    return {
+      data: { snapshot },
+      provider: this.name,
+      note: "Generated resume snapshot from provided career data",
     };
   }
 }
