@@ -14,6 +14,13 @@ VALUES
   ('11111111-1111-1111-1111-111111111111', 'authenticated', 'authenticated', 'user-a@test.com'),
   ('22222222-2222-2222-2222-222222222222', 'authenticated', 'authenticated', 'user-b@test.com');
 
+-- The on_auth_user_created trigger auto-creates profiles for new users.
+-- Delete them so we can insert test-specific data.
+DELETE FROM profiles WHERE user_id IN (
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222'
+);
+
 INSERT INTO profiles (user_id, name, email, phone, location)
 VALUES
   ('11111111-1111-1111-1111-111111111111', 'User A', 'a@test.com', '111', 'City A'),
