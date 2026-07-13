@@ -35,12 +35,11 @@ vi.mock("next/navigation", () => ({
 
 import {
   saveResumeAction,
-  deleteResumeAction,
   improveSummaryAction,
   improveExperienceAction,
   listResumesAction,
 } from "@/app/resumes/actions";
-import { deleteResumeAction as dashboardDeleteAction } from "@/app/dashboard/actions";
+import { deleteResumeAction } from "@/app/dashboard/actions";
 
 // Valid UUID for testing
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -133,19 +132,6 @@ describe("resume server actions", () => {
     });
   });
 
-  describe("dashboard deleteResumeAction", () => {
-    it("deletes and redirects to dashboard", async () => {
-      mockMaybeSingle.mockResolvedValue({
-        data: { id: VALID_UUID },
-        error: null,
-      });
-
-      await expect(dashboardDeleteAction(VALID_UUID)).rejects.toThrow(
-        "REDIRECT:/dashboard",
-      );
-    });
-  });
-
   describe("listResumesAction", () => {
     it("returns empty array when no resumes exist", async () => {
       mockOrder.mockResolvedValue({ data: [], error: null });
@@ -226,6 +212,18 @@ describe("protected resume routes", () => {
 
     const previewPage = await import("@/app/resumes/[id]/preview/page");
     expect(typeof previewPage.default).toBe("function");
+  });
+});
+
+describe("deleteResumeAction uniqueness", () => {
+  it("has exactly one canonical deleteResumeAction definition", async () => {
+    // Verify dashboard actions exports deleteResumeAction
+    const dashboardActions = await import("@/app/dashboard/actions");
+    expect(typeof dashboardActions.deleteResumeAction).toBe("function");
+
+    // Verify resumes actions does NOT export deleteResumeAction
+    const resumesActions = await import("@/app/resumes/actions");
+    expect((resumesActions as Record<string, unknown>).deleteResumeAction).toBeUndefined();
   });
 });
 

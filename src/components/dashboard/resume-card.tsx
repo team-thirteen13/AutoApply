@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Pencil, Eye, Trash2, MoreVertical } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
 import type { Resume } from "@/types/resume";
 import { deleteResumeAction } from "@/app/dashboard/actions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ResumeCardProps {
   resume: Resume;
@@ -13,21 +13,32 @@ interface ResumeCardProps {
 
 export function ResumeCard({ resume }: ResumeCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const [, formAction, isPending] = useActionState(
-    async (_prev: unknown, formData: FormData) => {
-      const id = formData.get("id") as string;
-      if (
-        !window.confirm(
-          "Are you sure you want to delete this resume? This action cannot be undone.",
-        )
-      ) {
-        return { success: false, error: { message: "Cancelled" } };
+
+  const handleConfirmDelete = useCallback(async () => {
+    setConfirmOpen(false);
+    setIsPending(true);
+    setDeleteError(null);
+
+    try {
+      const result = await deleteResumeAction(resume.id);
+      if (!result.success) {
+        setDeleteError(result.error?.message ?? "Failed to delete resume");
       }
-      return deleteResumeAction(id);
-    },
-    null,
-  );
+    } catch {
+      setDeleteError("An unexpected error occurred");
+    } finally {
+      setIsPending(false);
+    }
+  }, [resume.id]);
+
+  const handleCancelDelete = useCallback(() => {
+    setConfirmOpen(false);
+    setDeleteError(null);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -92,21 +103,47 @@ export function ResumeCard({ resume }: ResumeCardProps) {
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-              <form action={formAction}>
-                <input type="hidden" name="id" value={resume.id} />
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {isPending ? "Deleting..." : "Delete"}
-                </button>
-              </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setConfirmOpen(true);
+                }}
+                disabled={isPending}
+                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isPending ? "Deleting..." : "Delete"}
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete Resume"
+        description={`Are you sure you want to delete "${resume.title}"? This action cannot be undone.`}
+        confirmLabel={isPending ? "Deleting..." : "Delete"}
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
+
+      {/* Delete error toast */}
+      {deleteError && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
+          <p className="text-sm font-medium text-red-700">{deleteError}</p>
+          <button
+            onClick={() => setDeleteError(null)}
+            className="mt-1 text-xs text-red-500 hover:text-red-700"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   );
 }
