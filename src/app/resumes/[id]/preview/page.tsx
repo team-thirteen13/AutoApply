@@ -7,6 +7,7 @@ import { ArrowLeft, Pencil, Printer, Download } from "lucide-react";
 import type { ResumeSnapshot } from "@/types/resume";
 import { getResumeAction } from "../../actions";
 import { ResumePreview } from "@/components/preview/resume-preview";
+import { normalizeSnapshotSkills } from "@/lib/skills-normalize";
 
 // ─────────────────────────────────────────────────────────────
 // Resume Preview Page
@@ -28,7 +29,7 @@ export default function PreviewPage() {
         if (result.success) {
           const versions = result.data.versions;
           const latestVersion = versions[0];
-          setSnapshot(latestVersion?.snapshot ?? {});
+          setSnapshot(normalizeSnapshotSkills(latestVersion?.snapshot ?? {}));
           setTitle(result.data.resume.title);
         } else {
           setError(result.error?.message ?? "Failed to load resume");

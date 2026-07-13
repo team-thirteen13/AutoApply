@@ -10,9 +10,10 @@ interface SummaryFormProps {
   data: string;
   onChange: (data: string) => void;
   onAiImprove: (text: string) => Promise<string>;
+  errors?: Record<string, string>;
 }
 
-export function SummaryForm({ data, onChange, onAiImprove }: SummaryFormProps) {
+export function SummaryForm({ data, onChange, onAiImprove, errors }: SummaryFormProps) {
   const [loading, setLoading] = useState(false);
   const [improved, setImproved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export function SummaryForm({ data, onChange, onAiImprove }: SummaryFormProps) {
         label="Summary"
         htmlFor="summary"
         hint={`${data.length}/${maxChars} characters · Recommended: ${suggestedMin}+ characters`}
+        error={errors?.summary}
       >
         <Textarea
           id="summary"
@@ -64,7 +66,14 @@ export function SummaryForm({ data, onChange, onAiImprove }: SummaryFormProps) {
           placeholder="Results-driven software engineer with 5+ years of experience building scalable web applications..."
           rows={6}
           maxLength={maxChars}
+          aria-invalid={!!errors?.summary}
+          aria-describedby={errors?.summary ? "summary-error" : undefined}
         />
+        {errors?.summary && (
+          <p id="summary-error" className="mt-1 text-xs text-red-500" role="alert">
+            {errors.summary}
+          </p>
+        )}
       </FormField>
 
       {/* AI Improve */}

@@ -22,7 +22,7 @@ export function PreviewSections({ snapshot }: PreviewSectionsProps) {
     profile?.bio ||
     (experiences && experiences.length > 0) ||
     (education && education.length > 0) ||
-    (skills && (skills as unknown[]).length > 0) ||
+    (skills && skills.length > 0) ||
     (projects && projects.length > 0) ||
     (certificates && certificates.length > 0);
 
@@ -171,36 +171,25 @@ export function PreviewSections({ snapshot }: PreviewSectionsProps) {
       )}
 
       {/* Skills */}
-      {skills && (skills as unknown[]).length > 0 && (
+      {skills && skills.length > 0 && (
           <section>
             <h2 className="mb-3 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               Skills
             </h2>
             <div className="flex flex-wrap gap-2">
-              {Array.isArray(skills)
-                ? (
-                    skills as Array<{ name: string; category?: string }>
-                  ).map((skill, index) => (
-                    <span
-                      key={`skill-${index.toString()}`}
-                      className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                    >
-                      {skill.name}
-                      {skill.category && (
-                        <span className="ml-1 text-blue-500 dark:text-blue-400">
-                          ({skill.category})
-                        </span>
-                      )}
+              {skills.map((skill, index) => (
+                <span
+                  key={`skill-${index.toString()}`}
+                  className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                >
+                  {skill.name}
+                  {skill.category && (
+                    <span className="ml-1 text-blue-500 dark:text-blue-400">
+                      ({skill.category})
                     </span>
-                  ))
-                : (skills as string[]).map((skill, index) => (
-                    <span
-                      key={`skill-${index.toString()}`}
-                      className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+                  )}
+                </span>
+              ))}
             </div>
           </section>
         )}

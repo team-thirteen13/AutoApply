@@ -30,6 +30,7 @@ interface ExperienceFormProps {
     accomplishments: string[];
     skills: string[];
   }) => Promise<{ accomplishments: string[]; skills: string[] }>;
+  errors?: Record<string, string>;
 }
 
 const employmentTypes = [
@@ -45,6 +46,7 @@ export function ExperienceForm({
   data,
   onChange,
   onAiImprove,
+  errors,
 }: ExperienceFormProps) {
   const [improvingIdx, setImprovingIdx] = useState<number | null>(null);
   const [improvedExp, setImprovedExp] = useState<{
@@ -159,6 +161,7 @@ export function ExperienceForm({
         <div
           key={exp.id ?? idx}
           className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+          aria-label={`Experience entry ${idx + 1}: ${exp.title || "New"}`}
         >
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
@@ -373,6 +376,15 @@ export function ExperienceForm({
           </div>
         </div>
       ))}
+
+      {/* Validation errors */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+          {Object.entries(errors).map(([key, msg]) => (
+            <p key={key} className="text-sm text-red-600">{msg}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

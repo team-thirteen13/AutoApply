@@ -129,7 +129,10 @@ describe("MockAIProvider.generateResume", () => {
     });
     const skills = result.data.snapshot.skills;
 
-    expect(skills).toEqual(["React", "TypeScript"]);
+    expect(skills).toEqual([
+      { name: "React", category: "", proficiency: "" },
+      { name: "TypeScript", category: "", proficiency: "" },
+    ]);
   });
 
   it("generates summary from profile bio", async () => {

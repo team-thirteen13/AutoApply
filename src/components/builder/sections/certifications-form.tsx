@@ -17,11 +17,13 @@ type Certification = NonNullable<ResumeSnapshot["certificates"]>[number];
 interface CertificationsFormProps {
   data: Certification[];
   onChange: (data: Certification[]) => void;
+  errors?: Record<string, string>;
 }
 
 export function CertificationsForm({
   data,
   onChange,
+  errors,
 }: CertificationsFormProps) {
   const addEntry = () => {
     onChange([
@@ -221,6 +223,15 @@ export function CertificationsForm({
           </div>
         </div>
       ))}
+
+      {/* Validation errors */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+          {Object.entries(errors).map(([key, msg]) => (
+            <p key={key} className="text-sm text-red-600">{msg}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

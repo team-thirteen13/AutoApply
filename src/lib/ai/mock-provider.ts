@@ -193,11 +193,11 @@ export class MockAIProvider implements AIProvider {
       doesNotExpire: cert.doesNotExpire,
     }));
 
-    // Deduplicate and sort skills
+    // Deduplicate and sort skills, convert to object form
     const skillSection = skills
       ? [...new Set(skills.map((s) => s.trim()).filter(Boolean))].sort(
           (a, b) => a.localeCompare(b),
-        )
+        ).map((name) => ({ name, category: "", proficiency: "" }))
       : undefined;
 
     const snapshot: ResumeSnapshot = {

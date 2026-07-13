@@ -11,6 +11,7 @@ type Language = NonNullable<ResumeSnapshot["languages"]>[number];
 interface LanguagesFormProps {
   data: Language[];
   onChange: (data: Language[]) => void;
+  errors?: Record<string, string>;
 }
 
 const proficiencyLevels = [
@@ -21,7 +22,7 @@ const proficiencyLevels = [
   { value: "basic", label: "Basic" },
 ];
 
-export function LanguagesForm({ data, onChange }: LanguagesFormProps) {
+export function LanguagesForm({ data, onChange, errors }: LanguagesFormProps) {
   const addLanguage = () => {
     onChange([
       ...data,
@@ -98,6 +99,15 @@ export function LanguagesForm({ data, onChange }: LanguagesFormProps) {
                 <X className="h-4 w-4" />
               </button>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Validation errors */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+          {Object.entries(errors).map(([key, msg]) => (
+            <p key={key} className="text-sm text-red-600">{msg}</p>
           ))}
         </div>
       )}
