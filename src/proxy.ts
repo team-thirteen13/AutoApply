@@ -50,23 +50,41 @@ export async function proxy(request: NextRequest) {
   }
 
   // Create a response to pass to the Supabase client.
-  // Cookies set by Supabase (e.g. token refresh) will be
-  // included in this response.
-  let response = NextResponse.next();
+  // Cookies set by Supabase (e.g. token refresh or cleanup)
+  // are written here via the setAll callback in createProxyClient.
+  const response = NextResponse.next();
 
   const supabase = createProxyClient(request, response);
 
+  // getUser() validates the JWT server-side. On any failure
+  // (network error, invalid token, expired session with no
+  // refresh token), treat as unauthenticated — fail closed.
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser().catch(() => ({
+    data: { user: null },
+    error: { message: "getUser failed" },
+  }));
 
   if (!user) {
-    // Build login URL with return destination
+    // Build login URL with return destination (preserving query string)
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("redirectTo", pathname);
+    loginUrl.searchParams.set(
+      "redirectTo",
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
 
-    response = NextResponse.redirect(loginUrl);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+
+    // Copy any cookies Supabase wrote to the intermediate response
+    // (e.g. cleared or refreshed auth cookies) onto the redirect
+    // response so they reach the browser.
+    response.cookies.getAll().forEach((cookie) =>
+      redirectResponse.cookies.set(cookie),
+    );
+
+    return redirectResponse;
   }
 
   return response;
