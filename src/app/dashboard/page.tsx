@@ -19,7 +19,20 @@ export default async function DashboardPage() {
   const profileResult = await getProfile();
   const resumesResult = await listResumes();
 
-  const resumes = resumesResult.success ? resumesResult.data : [];
+  // Handle profile fetch failure - redirect to login if auth error
+  if (!profileResult.success) {
+    if (profileResult.error.code === "authentication_required") {
+      redirect("/login");
+    }
+    // For other profile errors, continue with null profile
+  }
+
+  // Handle resumes fetch failure - throw to trigger error boundary
+  if (!resumesResult.success) {
+    throw new Error("Failed to load resumes. Please try again.");
+  }
+
+  const resumes = resumesResult.data;
   const profile = profileResult.success ? profileResult.data : null;
 
   return (

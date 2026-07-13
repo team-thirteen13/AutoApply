@@ -6,7 +6,6 @@ import {
   getResume,
   listResumes,
   updateResume,
-  deleteResume,
   createVersion,
   listVersions,
 } from "@/features/resume";
@@ -99,16 +98,6 @@ export async function saveResumeAction(
   }
 
   return { success: true as const, data: updateResult.data };
-}
-
-// ── Delete resume ───────────────────────────────────────────
-
-export async function deleteResumeAction(id: string) {
-  const result = await deleteResume(id);
-  if (result.success) {
-    redirect("/dashboard");
-  }
-  return result;
 }
 
 // ── Improve summary with AI ─────────────────────────────────
