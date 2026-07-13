@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { ResumeSnapshot } from "@/types/resume";
+import { toMonthInputValue, fromMonthInputValue } from "@/lib/date-normalize";
 
 type Project = NonNullable<ResumeSnapshot["projects"]>[number];
 
@@ -176,9 +177,9 @@ export function ProjectsForm({ data, onChange, errors }: ProjectsFormProps) {
             <FormField label="Start Date">
               <Input
                 type="month"
-                value={proj.startDate ?? ""}
+                value={toMonthInputValue(proj.startDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "startDate", e.target.value)
+                  updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))
                 }
               />
             </FormField>
@@ -186,9 +187,9 @@ export function ProjectsForm({ data, onChange, errors }: ProjectsFormProps) {
             <FormField label="End Date">
               <Input
                 type="month"
-                value={proj.endDate ?? ""}
+                value={toMonthInputValue(proj.endDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "endDate", e.target.value || null)
+                  updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
               />
             </FormField>

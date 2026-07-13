@@ -25,6 +25,7 @@ import {
 } from "./sections";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { VersionHistory } from "./version-history";
+import { GenerateResumeFlow } from "@/components/ai/generate-resume-flow";
 import { Toast } from "@/components/ui/toast";
 import {
   validateSection,
@@ -83,6 +84,10 @@ export function ResumeBuilder({
   // Version history state
   const [historyOpen, setHistoryOpen] = useState(false);
   const [versionCount, setVersionCount] = useState(0);
+
+  // AI generation state
+  const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
+  const aiGenerateButtonRef = useRef<HTMLButtonElement>(null);
 
   // Mark dirty on changes
   const markDirty = useCallback(() => {
@@ -238,6 +243,20 @@ export function ResumeBuilder({
     [],
   );
 
+  // Handle AI-generated snapshot: replace builder snapshot
+  const handleAiApplySnapshot = useCallback(
+    (aiSnapshot: ResumeSnapshot) => {
+      setSnapshot(aiSnapshot);
+      markDirty();
+      setAiGenerateOpen(false);
+      setToast({
+        message: "AI-generated resume applied. Save to create a version.",
+        type: "success",
+      });
+    },
+    [markDirty],
+  );
+
   // AI handlers
   const handleAiImproveSummary = async (text: string): Promise<string> => {
     const result = await improveSummaryAction(text, snapshot.profile?.title);
@@ -387,8 +406,10 @@ export function ResumeBuilder({
         onSave={() => handleSave(false)}
         onSaveAndPreview={() => handleSave(true)}
         onOpenHistory={() => setHistoryOpen(true)}
+        onOpenAiGenerate={() => setAiGenerateOpen(true)}
         versionCount={versionCount}
         historyButtonRef={historyButtonRef}
+        aiGenerateButtonRef={aiGenerateButtonRef}
       />
 
       <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
@@ -560,6 +581,16 @@ export function ResumeBuilder({
         onClose={() => setHistoryOpen(false)}
         onRestore={handleRestore}
         historyButtonRef={historyButtonRef}
+      />
+
+      {/* AI Generation Flow */}
+      <GenerateResumeFlow
+        open={aiGenerateOpen}
+        onClose={() => setAiGenerateOpen(false)}
+        mode="existing"
+        initialTargetRole={snapshot.profile?.title || ""}
+        onApplySnapshot={handleAiApplySnapshot}
+        triggerRef={aiGenerateButtonRef}
       />
 
       {/* Toast */}

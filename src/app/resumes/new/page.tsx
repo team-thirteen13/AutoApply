@@ -2,17 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Wand2 } from "lucide-react";
 import { createResumeAction } from "@/app/resumes/actions";
+import { GenerateResumeFlow } from "@/components/ai/generate-resume-flow";
 
 // ─────────────────────────────────────────────────────────────
 // Create New Resume Page
 // ─────────────────────────────────────────────────────────────
 // Client component with structured form errors, pending state,
-// and canonical action call. No private duplicate action.
+// canonical action call, and AI generation option.
 
 export default function NewResumePage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [aiFlowOpen, setAiFlowOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [targetRole, setTargetRole] = useState("");
@@ -154,11 +157,40 @@ export default function NewResumePage() {
             </button>
           </form>
 
+          {/* AI generation option */}
+          <div className="mt-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-slate-400">or</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiFlowOpen(true)}
+              disabled={isPending}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-6 py-3 text-sm font-medium text-violet-700 shadow-sm transition-all hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Wand2 className="h-4 w-4" />
+              Generate with AI
+            </button>
+          </div>
+
           <p className="mt-4 text-center text-xs text-slate-400">
             ⚠ Temporary integration UI — not the final design
           </p>
         </div>
       </div>
+
+      <GenerateResumeFlow
+        open={aiFlowOpen}
+        onClose={() => setAiFlowOpen(false)}
+        mode="new"
+        initialTargetRole={targetRole}
+        initialTitle={title}
+      />
     </div>
   );
 }

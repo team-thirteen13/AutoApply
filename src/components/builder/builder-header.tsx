@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Loader2,
   History,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,8 +21,10 @@ interface BuilderHeaderProps {
   onSave: () => void;
   onSaveAndPreview: () => void;
   onOpenHistory: () => void;
+  onOpenAiGenerate: () => void;
   versionCount: number;
   historyButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  aiGenerateButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function BuilderHeader({
@@ -33,8 +36,10 @@ export function BuilderHeader({
   onSave,
   onSaveAndPreview,
   onOpenHistory,
+  onOpenAiGenerate,
   versionCount,
   historyButtonRef,
+  aiGenerateButtonRef,
 }: BuilderHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
@@ -83,6 +88,16 @@ export function BuilderHeader({
           )}
 
           {/* Actions */}
+          <Button
+            ref={aiGenerateButtonRef}
+            variant="ghost"
+            size="sm"
+            onClick={onOpenAiGenerate}
+            aria-label="Generate resume with AI"
+          >
+            <Wand2 className="h-4 w-4" />
+            <span className="hidden sm:inline">AI Generate</span>
+          </Button>
           <Button
             ref={historyButtonRef}
             variant="ghost"

@@ -14,13 +14,21 @@ export function EmptyResumeState() {
         Build a professional resume in minutes with our AI-powered builder.
         Stand out from the crowd.
       </p>
-      <Link
-        href="/resumes/new"
-        className="mt-8 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 hover:brightness-110"
-      >
-        <Sparkles className="h-4 w-4" />
-        Create Resume
-      </Link>
+      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Link
+          href="/resumes/new"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 hover:brightness-110"
+        >
+          <Sparkles className="h-4 w-4" />
+          Create Resume
+        </Link>
+        <Link
+          href="/resumes/new"
+          className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-6 py-3 text-sm font-medium text-violet-700 shadow-sm transition-all hover:bg-violet-50"
+        >
+          Generate with AI
+        </Link>
+      </div>
     </div>
   );
 }

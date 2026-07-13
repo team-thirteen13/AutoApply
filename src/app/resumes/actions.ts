@@ -14,6 +14,11 @@ import {
 } from "@/features/resume";
 import { getProfile } from "@/features/profile/get-profile";
 import { MockAIProvider } from "@/lib/ai";
+import type { GenerateResumeInput, GenerateResumeOutput } from "@/lib/ai/types";
+import { generateResumeContent } from "@/features/ai/generate-resume-content";
+import type {
+  GenerateResumeOperationResult,
+} from "@/features/ai/generate-resume-content";
 import type { ResumeSnapshot, ResumeOperationResult, ResumeVersion } from "@/types/resume";
 
 // ─────────────────────────────────────────────────────────────
@@ -236,6 +241,70 @@ export async function improveExperienceAction(experience: {
   skills: string[];
 }) {
   return aiProvider.improveExperience({ experience });
+}
+
+// ── Generate resume with AI ──────────────────────────────────
+
+export async function generateResumeAction(
+  input: GenerateResumeInput,
+): Promise<GenerateResumeOperationResult<GenerateResumeOutput>> {
+  return generateResumeContent(aiProvider, input);
+}
+
+// ── Create resume from generated snapshot ────────────────────
+// Creates a resume record and an initial version with the provided
+// snapshot (from AI generation). Compensates by deleting the
+// orphaned resume if version creation fails.
+
+export async function createResumeWithSnapshotAction(
+  title: string,
+  snapshot: ResumeSnapshot,
+  targetRole?: string | null,
+): Promise<CreateResumeResult> {
+  const trimmedTitle = title?.trim();
+  if (!trimmedTitle) {
+    return {
+      success: false,
+      error: "Title is required",
+      fieldErrors: { title: "Title is required" },
+    };
+  }
+
+  if (trimmedTitle.length > 200) {
+    return {
+      success: false,
+      error: "Title is too long",
+      fieldErrors: { title: "Title must be 200 characters or less" },
+    };
+  }
+
+  const result = await createResume({
+    title: trimmedTitle,
+    targetRole: targetRole || null,
+  });
+
+  if (!result.success) {
+    const message =
+      result.error.code === "authentication_required"
+        ? "You must be signed in to create a resume"
+        : "Failed to create resume. Please try again.";
+    return { success: false, error: message };
+  }
+
+  const versionResult = await createVersion(result.data.id, snapshot, {
+    label: "AI Generated",
+  });
+
+  if (!versionResult.success) {
+    await deleteResume(result.data.id).catch(() => {});
+    return {
+      success: false,
+      error: "Failed to save generated resume. Please try again.",
+    };
+  }
+
+  revalidatePath("/dashboard");
+  return { success: true, resumeId: result.data.id };
 }
 
 // ── Get profile for pre-filling ─────────────────────────────
