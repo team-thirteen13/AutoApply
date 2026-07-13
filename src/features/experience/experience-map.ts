@@ -1,5 +1,5 @@
 import type { Experience } from "@/types/experience";
-import type { CreateExperienceInput } from "@/lib/validation/experience";
+import type { CreateExperienceInput, UpdateExperienceInput } from "@/lib/validation/experience";
 
 // ─────────────────────────────────────────────────────────────
 // Experience row mapping
@@ -81,6 +81,42 @@ export function toExperienceInsert(
     title: input.title,
     ...(input.companyUrl !== undefined && { company_url: input.companyUrl }),
     start_date: input.startDate,
+    ...(input.endDate !== undefined && { end_date: input.endDate }),
+    ...(input.isCurrent !== undefined && { is_current: input.isCurrent }),
+    ...(input.accomplishments !== undefined && { accomplishments: input.accomplishments }),
+    ...(input.skills !== undefined && { skills: input.skills }),
+  };
+}
+
+// ── Domain → update row ─────────────────────────────────────
+
+export type ExperienceUpdateRow = {
+  company?: string;
+  title?: string;
+  company_url?: string | null;
+  start_date?: string;
+  end_date?: string | null;
+  is_current?: boolean;
+  accomplishments?: string[];
+  skills?: string[];
+};
+
+/**
+ * Maps validated update input to a Supabase update row.
+ *
+ * - Only includes caller-provided fields
+ * - undefined properties are omitted (existing values preserved)
+ * - explicit null values are preserved
+ * - id, user_id, created_at, and updated_at are never included
+ */
+export function toExperienceUpdate(
+  input: UpdateExperienceInput,
+): ExperienceUpdateRow {
+  return {
+    ...(input.company !== undefined && { company: input.company }),
+    ...(input.title !== undefined && { title: input.title }),
+    ...(input.companyUrl !== undefined && { company_url: input.companyUrl }),
+    ...(input.startDate !== undefined && { start_date: input.startDate }),
     ...(input.endDate !== undefined && { end_date: input.endDate }),
     ...(input.isCurrent !== undefined && { is_current: input.isCurrent }),
     ...(input.accomplishments !== undefined && { accomplishments: input.accomplishments }),
