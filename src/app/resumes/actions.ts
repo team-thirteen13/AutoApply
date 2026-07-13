@@ -8,12 +8,13 @@ import {
   updateResume,
   createVersion,
   listVersions,
+  getVersion,
   deleteResume,
   INITIAL_SNAPSHOT,
 } from "@/features/resume";
 import { getProfile } from "@/features/profile/get-profile";
 import { MockAIProvider } from "@/lib/ai";
-import type { ResumeSnapshot } from "@/types/resume";
+import type { ResumeSnapshot, ResumeOperationResult, ResumeVersion } from "@/types/resume";
 
 // ─────────────────────────────────────────────────────────────
 // Resume Actions
@@ -146,6 +147,75 @@ export async function saveResumeAction(
   }
 
   return { success: true as const, data: updateResult.data };
+}
+
+// ── List versions for a resume ──────────────────────────────
+
+export async function listVersionsAction(
+  resumeId: string,
+): Promise<ResumeOperationResult<ResumeVersion[]>> {
+  return listVersions(resumeId);
+}
+
+// ── Restore a historical version ────────────────────────────
+// Fetches the historical version, validates ownership, then
+// creates a NEW version with the same snapshot. The original
+// historical row is never modified.
+
+export async function restoreVersionAction(
+  resumeId: string,
+  versionId: string,
+): Promise<
+  ResumeOperationResult<{
+    version: ResumeVersion;
+    snapshot: ResumeSnapshot;
+  }>
+> {
+  // Fetch the source version (validates ownership via RLS + feature)
+  const versionResult = await getVersion(versionId);
+  if (!versionResult.success) {
+    return versionResult;
+  }
+
+  const sourceVersion = versionResult.data;
+
+  // Ensure the version belongs to the same resume
+  if (sourceVersion.resumeId !== resumeId) {
+    return {
+      success: false as const,
+      error: {
+        code: "version_not_found" as const,
+        message: "Version does not belong to this resume",
+      },
+    };
+  }
+
+  // Build a human-readable label
+  const sourceDate = new Date(sourceVersion.createdAt).toLocaleString();
+  const sourceLabel = sourceVersion.label
+    ? `"${sourceVersion.label}"`
+    : sourceDate;
+  const label = `Restored from version ${sourceLabel}`;
+
+  // Create a new version with the historical snapshot
+  const createResult = await createVersion(resumeId, sourceVersion.snapshot, {
+    label,
+  });
+
+  if (!createResult.success) {
+    return createResult;
+  }
+
+  // Revalidate dashboard in case timestamps changed
+  revalidatePath("/dashboard");
+
+  return {
+    success: true as const,
+    data: {
+      version: createResult.data,
+      snapshot: sourceVersion.snapshot,
+    },
+  };
 }
 
 // ── Improve summary with AI ─────────────────────────────────

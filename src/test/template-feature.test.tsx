@@ -20,6 +20,7 @@ vi.mock("@/app/resumes/actions", () => ({
   saveResumeAction: vi.fn().mockResolvedValue({ success: true, data: { id: "resume-1" } }),
   improveSummaryAction: vi.fn().mockResolvedValue({ data: { bio: "Improved summary" } }),
   improveExperienceAction: vi.fn().mockResolvedValue({ data: { accomplishments: [] } }),
+  listVersionsAction: vi.fn().mockResolvedValue({ success: true, data: [] }),
 }));
 
 vi.mock("@/components/ui/toast", () => ({

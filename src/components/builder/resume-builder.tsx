@@ -24,6 +24,7 @@ import {
   LanguagesForm,
 } from "./sections";
 import { ResumePreview } from "@/components/preview/resume-preview";
+import { VersionHistory } from "./version-history";
 import { Toast } from "@/components/ui/toast";
 import {
   validateSection,
@@ -77,6 +78,11 @@ export function ResumeBuilder({
     languages: {},
   });
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const historyButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Version history state
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versionCount, setVersionCount] = useState(0);
 
   // Mark dirty on changes
   const markDirty = useCallback(() => {
@@ -206,6 +212,32 @@ export function ResumeBuilder({
     markDirty();
   }, [markDirty]);
 
+  // Fetch initial version count
+  useEffect(() => {
+    import("@/app/resumes/actions").then(({ listVersionsAction }) =>
+      listVersionsAction(resumeId).then((result) => {
+        if (result.success) {
+          setVersionCount(result.data.length);
+        }
+      }),
+    );
+  }, [resumeId]);
+
+  // Handle restore: replace builder snapshot with restored version
+  const handleRestore = useCallback(
+    (restoredSnapshot: ResumeSnapshot) => {
+      setSnapshot(restoredSnapshot);
+      setIsDirty(false);
+      setHistoryOpen(false);
+      setVersionCount((prev) => prev + 1);
+      setToast({
+        message: "Version restored successfully",
+        type: "success",
+      });
+    },
+    [],
+  );
+
   // AI handlers
   const handleAiImproveSummary = async (text: string): Promise<string> => {
     const result = await improveSummaryAction(text, snapshot.profile?.title);
@@ -313,6 +345,7 @@ export function ResumeBuilder({
         setIsDirty(false);
         const now = new Date().toLocaleTimeString();
         setLastSaved(now);
+        setVersionCount((prev) => prev + 1);
         setToast({ message: "Resume saved successfully", type: "success" });
 
         if (andPreview) {
@@ -353,6 +386,9 @@ export function ResumeBuilder({
         lastSaved={lastSaved}
         onSave={() => handleSave(false)}
         onSaveAndPreview={() => handleSave(true)}
+        onOpenHistory={() => setHistoryOpen(true)}
+        versionCount={versionCount}
+        historyButtonRef={historyButtonRef}
       />
 
       <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
@@ -516,6 +552,15 @@ export function ResumeBuilder({
           </div>
         </div>
       </div>
+
+      {/* Version History Panel */}
+      <VersionHistory
+        open={historyOpen}
+        resumeId={resumeId}
+        onClose={() => setHistoryOpen(false)}
+        onRestore={handleRestore}
+        historyButtonRef={historyButtonRef}
+      />
 
       {/* Toast */}
       {toast && (
