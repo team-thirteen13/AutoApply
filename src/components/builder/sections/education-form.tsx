@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { ResumeSnapshot } from "@/types/resume";
+import { toMonthInputValue, fromMonthInputValue } from "@/lib/date-normalize";
 
 type Education = NonNullable<ResumeSnapshot["education"]>[number];
 
@@ -180,9 +181,9 @@ export function EducationForm({ data, onChange, errors }: EducationFormProps) {
             <FormField label="Start Date" required>
               <Input
                 type="month"
-                value={edu.startDate}
+                value={toMonthInputValue(edu.startDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "startDate", e.target.value)
+                  updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))
                 }
               />
             </FormField>
@@ -190,9 +191,9 @@ export function EducationForm({ data, onChange, errors }: EducationFormProps) {
             <FormField label="End Date">
               <Input
                 type="month"
-                value={edu.endDate ?? ""}
+                value={toMonthInputValue(edu.endDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "endDate", e.target.value || null)
+                  updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
                 disabled={edu.isCurrent}
               />

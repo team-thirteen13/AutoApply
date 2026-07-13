@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { ResumeSnapshot } from "@/types/resume";
+import { toMonthInputValue, fromMonthInputValue } from "@/lib/date-normalize";
 
 type Experience = NonNullable<ResumeSnapshot["experiences"]>[number];
 
@@ -247,17 +248,17 @@ export function ExperienceForm({
             <FormField label="Start Date" required>
               <Input
                 type="month"
-                value={exp.startDate}
-                onChange={(e) => updateEntry(idx, "startDate", e.target.value)}
+                value={toMonthInputValue(exp.startDate)}
+                onChange={(e) => updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))}
               />
             </FormField>
 
             <FormField label="End Date">
               <Input
                 type="month"
-                value={exp.endDate ?? ""}
+                value={toMonthInputValue(exp.endDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "endDate", e.target.value || null)
+                  updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
                 disabled={exp.isCurrent}
               />

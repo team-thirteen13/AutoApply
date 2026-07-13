@@ -19,6 +19,7 @@ import type {
   GenerateResumeOutput,
 } from "./types";
 import type { ResumeSnapshot } from "@/types/resume";
+import { normalizeToISODate } from "@/lib/date-normalize";
 
 export class MockAIProvider implements AIProvider {
   readonly name = "mock";
@@ -146,31 +147,31 @@ export class MockAIProvider implements AIProvider {
       summary = `Results-driven ${role} with experience in building scalable applications and collaborative team environments.`;
     }
 
-    // Map experiences, preserving source facts
+    // Map experiences, preserving source facts and normalizing dates
     const experienceSection = experiences?.map((exp) => ({
       company: exp.company,
       title: exp.title,
-      startDate: exp.startDate,
-      endDate: exp.endDate,
+      startDate: normalizeToISODate(exp.startDate) as string,
+      endDate: normalizeToISODate(exp.endDate),
       isCurrent: exp.isCurrent,
       description: exp.description,
       accomplishments: exp.accomplishments ?? [],
       skills: exp.skills ?? [],
     }));
 
-    // Map education, preserving source facts
+    // Map education, preserving source facts and normalizing dates
     const educationSection = education?.map((edu) => ({
       university: edu.university,
       degree: edu.degree,
       fieldOfStudy: edu.fieldOfStudy,
-      startDate: edu.startDate,
-      endDate: edu.endDate,
+      startDate: normalizeToISODate(edu.startDate) as string,
+      endDate: normalizeToISODate(edu.endDate),
       isCurrent: edu.isCurrent,
       grade: edu.grade,
       description: edu.description,
     }));
 
-    // Map projects, preserving source facts
+    // Map projects, preserving source facts and normalizing dates
     const projectSection = projects?.map((proj) => ({
       title: proj.title,
       description: proj.description,
@@ -178,18 +179,19 @@ export class MockAIProvider implements AIProvider {
       url: proj.url,
       liveUrl: proj.liveUrl,
       gitUrl: proj.gitUrl,
-      startDate: proj.startDate,
-      endDate: proj.endDate,
+      // startDate in projects is string | undefined (null not allowed)
+      startDate: normalizeToISODate(proj.startDate) ?? undefined,
+      endDate: normalizeToISODate(proj.endDate),
     }));
 
-    // Map certificates, preserving source facts
+    // Map certificates, preserving source facts and normalizing dates
     const certificateSection = certificates?.map((cert) => ({
       name: cert.name,
       issuingOrganisation: cert.issuingOrganisation,
       url: cert.url,
       credentialId: cert.credentialId,
-      startDate: cert.startDate,
-      endDate: cert.endDate,
+      startDate: normalizeToISODate(cert.startDate) as string,
+      endDate: normalizeToISODate(cert.endDate),
       doesNotExpire: cert.doesNotExpire,
     }));
 

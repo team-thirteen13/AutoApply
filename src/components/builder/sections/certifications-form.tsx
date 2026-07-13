@@ -11,6 +11,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ResumeSnapshot } from "@/types/resume";
+import { toMonthInputValue, fromMonthInputValue } from "@/lib/date-normalize";
 
 type Certification = NonNullable<ResumeSnapshot["certificates"]>[number];
 
@@ -168,9 +169,9 @@ export function CertificationsForm({
             <FormField label="Issue Date" required>
               <Input
                 type="month"
-                value={cert.startDate}
+                value={toMonthInputValue(cert.startDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "startDate", e.target.value)
+                  updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))
                 }
               />
             </FormField>
@@ -178,9 +179,9 @@ export function CertificationsForm({
             <FormField label="Expiry Date">
               <Input
                 type="month"
-                value={cert.endDate ?? ""}
+                value={toMonthInputValue(cert.endDate)}
                 onChange={(e) =>
-                  updateEntry(idx, "endDate", e.target.value || null)
+                  updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
                 disabled={cert.doesNotExpire}
               />
