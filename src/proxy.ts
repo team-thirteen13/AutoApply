@@ -18,7 +18,7 @@ import { createProxyClient } from "@/lib/supabase/proxy";
 // ── Protected routes ──────────────────────────────────────
 // These paths require an authenticated session.
 
-const PROTECTED_PATHS = ["/dashboard", "/resumes"];
+const PROTECTED_PATHS = ["/dashboard", "/resumes", "/profile"];
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATHS.some(
