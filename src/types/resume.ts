@@ -6,9 +6,13 @@
 // A version is a point-in-time snapshot of that data.
 // ─────────────────────────────────────────────────────────────
 
+import type { ResumeTemplateId } from "@/lib/templates/types";
+
 // ── Resume snapshot (stored as JSONB in resume_versions) ─────
 
 export interface ResumeSnapshot {
+  /** Visual template for rendering. Missing = default ("classic"). */
+  templateId?: ResumeTemplateId;
   profile?: {
     name?: string;
     title?: string;

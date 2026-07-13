@@ -8,6 +8,7 @@ import type { ResumeSnapshot } from "@/types/resume";
 import { getResumeAction } from "../../actions";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { normalizeSnapshotSkills } from "@/lib/skills-normalize";
+import { normalizeSnapshotTemplate } from "@/lib/templates";
 
 // ─────────────────────────────────────────────────────────────
 // Resume Preview Page
@@ -29,7 +30,11 @@ export default function PreviewPage() {
         if (result.success) {
           const versions = result.data.versions;
           const latestVersion = versions[0];
-          setSnapshot(normalizeSnapshotSkills(latestVersion?.snapshot ?? {}));
+          setSnapshot(
+            normalizeSnapshotTemplate(
+              normalizeSnapshotSkills(latestVersion?.snapshot ?? {}),
+            ),
+          );
           setTitle(result.data.resume.title);
         } else {
           setError(result.error?.message ?? "Failed to load resume");

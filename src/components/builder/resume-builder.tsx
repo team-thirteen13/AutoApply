@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { ResumeSnapshot } from "@/types/resume";
+import type { ResumeTemplateId } from "@/lib/templates/types";
 import {
   saveResumeAction,
   improveSummaryAction,
@@ -11,6 +12,7 @@ import {
 import { BuilderHeader } from "./builder-header";
 import { BuilderSidebar, SECTIONS } from "./builder-sidebar";
 import { MobileSectionNav } from "./mobile-section-nav";
+import { TemplateSelector } from "./template-selector";
 import {
   PersonalInfoForm,
   SummaryForm,
@@ -29,6 +31,7 @@ import {
   type BuilderSectionId,
 } from "@/lib/validation/builder";
 import { normalizeSkills } from "@/lib/skills-normalize";
+import { normalizeSnapshotTemplate, getEffectiveTemplateId } from "@/lib/templates";
 
 interface ResumeBuilderProps {
   resumeId: string;
@@ -45,12 +48,13 @@ export function ResumeBuilder({
   const [title, setTitle] = useState(initialTitle);
   const [snapshot, setSnapshot] = useState<ResumeSnapshot>(() => {
     const initial = initialSnapshot ?? {};
-    // Normalize legacy string[] skills to object form at load boundary
-    // Create a copy to avoid mutating props
-    if (initial.skills) {
-      return { ...initial, skills: normalizeSkills(initial.skills) };
+    // Normalize at load boundary: skills + templateId
+    let normalized = initial;
+    if (normalized.skills) {
+      normalized = { ...normalized, skills: normalizeSkills(normalized.skills) };
     }
-    return initial;
+    normalized = normalizeSnapshotTemplate(normalized);
+    return normalized;
   });
   const [activeSection, setActiveSection] = useState("personal");
   const [isSaving, setIsSaving] = useState(false);
@@ -191,6 +195,16 @@ export function ResumeBuilder({
     setSnapshot((prev) => ({ ...prev, languages: data }));
     markDirty();
   };
+
+  const updateTemplate = useCallback((templateId: ResumeTemplateId) => {
+    setSnapshot((prev) => {
+      if (prev.templateId === templateId) return prev;
+      return { ...prev, templateId };
+    });
+    // Always mark dirty — the check above prevents state churn but
+    // markDirty is idempotent so calling it on same-template click is safe
+    markDirty();
+  }, [markDirty]);
 
   // AI handlers
   const handleAiImproveSummary = async (text: string): Promise<string> => {
@@ -358,6 +372,12 @@ export function ResumeBuilder({
           />
 
           <div className="space-y-8">
+            {/* Template Selection */}
+            <TemplateSelector
+              selected={getEffectiveTemplateId(snapshot.templateId)}
+              onChange={updateTemplate}
+            />
+
             {/* Personal Info */}
             <div
               ref={(el) => {
