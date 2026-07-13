@@ -26,6 +26,7 @@ vi.mock("next/navigation", () => ({
 const mockCreateResumeAction = vi.fn();
 vi.mock("@/app/resumes/actions", () => ({
   createResumeAction: (...args: unknown[]) => mockCreateResumeAction(...args),
+  listVersionsAction: vi.fn().mockResolvedValue({ success: true, data: [] }),
 }));
 
 // ── Import after mocks ─────────────────────────────────────

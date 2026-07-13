@@ -7,6 +7,7 @@ import {
   Eye,
   CheckCircle2,
   Loader2,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +19,9 @@ interface BuilderHeaderProps {
   lastSaved: string | null;
   onSave: () => void;
   onSaveAndPreview: () => void;
+  onOpenHistory: () => void;
+  versionCount: number;
+  historyButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 export function BuilderHeader({
@@ -28,6 +32,9 @@ export function BuilderHeader({
   lastSaved,
   onSave,
   onSaveAndPreview,
+  onOpenHistory,
+  versionCount,
+  historyButtonRef,
 }: BuilderHeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
@@ -76,6 +83,21 @@ export function BuilderHeader({
           )}
 
           {/* Actions */}
+          <Button
+            ref={historyButtonRef}
+            variant="ghost"
+            size="sm"
+            onClick={onOpenHistory}
+            aria-label={`Version history (${versionCount} version${versionCount !== 1 ? "s" : ""})`}
+          >
+            <History className="h-4 w-4" />
+            <span className="hidden sm:inline">History</span>
+            {versionCount > 0 && (
+              <span className="ml-0.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                {versionCount}
+              </span>
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
