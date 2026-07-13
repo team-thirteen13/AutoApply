@@ -140,15 +140,12 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        // Handle validation errors from server
-        if (result.error?.code === "validation_error") {
-          setErrors({ name: result.error.message });
-        } else {
-          setToast({
-            message: result.error?.message ?? "Failed to update profile",
-            type: "error",
-          });
-        }
+        // Server validation errors are form-level (we don't know which field)
+        // Client-side Zod field errors are shown inline via setErrors above
+        setToast({
+          message: result.error?.message ?? "Failed to update profile",
+          type: "error",
+        });
         return;
       }
 

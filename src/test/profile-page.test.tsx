@@ -53,23 +53,15 @@ vi.mock("@/components/profile/profile-form", () => ({
   ),
 }));
 
-vi.mock("@/components/profile/completeness-indicator", () => ({
-  CompletenessIndicator: () => (
-    <div data-testid="completeness-indicator" />
-  ),
-  calculateCompleteness: (profile: Record<string, string | null>) => {
-    const REQUIRED_FIELDS = ["name", "email", "phone", "location", "githubUrl", "linkedinUrl", "portfolioUrl"];
-    const filled = REQUIRED_FIELDS.filter((field) => {
-      const value = profile[field];
-      return value !== null && value !== undefined && String(value).trim().length > 0;
-    }).length;
-    return {
-      filled,
-      total: REQUIRED_FIELDS.length,
-      percentage: Math.round((filled / REQUIRED_FIELDS.length) * 100),
-    };
-  },
-}));
+vi.mock("@/components/profile/completeness-indicator", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/profile/completeness-indicator")>();
+  return {
+    ...actual,
+    CompletenessIndicator: () => (
+      <div data-testid="completeness-indicator" />
+    ),
+  };
+});
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
@@ -309,6 +301,46 @@ describe("Completeness calculation", () => {
 
     // Email always counts
     expect(result.filled).toBe(1);
+  });
+
+  it("returns 0% for completely empty profile", async () => {
+    const { calculateCompleteness } = await import(
+      "@/components/profile/completeness-indicator"
+    );
+
+    const result = calculateCompleteness({
+      name: "",
+      email: "",
+      phone: "",
+      location: "",
+      githubUrl: null,
+      linkedinUrl: null,
+      portfolioUrl: null,
+    });
+
+    expect(result.filled).toBe(0);
+    expect(result.total).toBe(7);
+    expect(result.percentage).toBe(0);
+  });
+
+  it("calculates deterministic rounding correctly", async () => {
+    const { calculateCompleteness } = await import(
+      "@/components/profile/completeness-indicator"
+    );
+
+    // 3 out of 7 = 42.857...% -> rounds to 43%
+    const result = calculateCompleteness({
+      name: "John",
+      email: "john@example.com",
+      phone: "+1 234 567 890",
+      location: "",
+      githubUrl: null,
+      linkedinUrl: null,
+      portfolioUrl: null,
+    });
+
+    expect(result.filled).toBe(3);
+    expect(result.percentage).toBe(43);
   });
 });
 
