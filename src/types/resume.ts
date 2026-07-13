@@ -77,9 +77,9 @@ export interface ResumeSnapshot {
   skills?: Array<{
     id?: string;
     name: string;
-    category?: string;
-    proficiency?: string;
-  }> | string[];
+    category: string;
+    proficiency: string;
+  }>;
   languages?: Array<{
     id?: string;
     name: string;

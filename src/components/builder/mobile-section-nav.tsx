@@ -24,6 +24,8 @@ export function MobileSectionNav({
     <div className="mb-4 lg:hidden">
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm"
       >
         <span className="flex items-center gap-2">
@@ -36,7 +38,7 @@ export function MobileSectionNav({
       </button>
 
       {open && (
-        <div className="mt-2 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="mt-2 rounded-xl border border-slate-200 bg-white py-1 shadow-lg" role="listbox" aria-label="Resume sections">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             const isCompleted = completedSections.has(section.id);
@@ -45,6 +47,8 @@ export function MobileSectionNav({
             return (
               <button
                 key={section.id}
+                role="option"
+                aria-selected={isActive}
                 onClick={() => {
                   onSectionClick(section.id);
                   setOpen(false);

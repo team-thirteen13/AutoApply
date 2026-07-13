@@ -18,9 +18,10 @@ type Project = NonNullable<ResumeSnapshot["projects"]>[number];
 interface ProjectsFormProps {
   data: Project[];
   onChange: (data: Project[]) => void;
+  errors?: Record<string, string>;
 }
 
-export function ProjectsForm({ data, onChange }: ProjectsFormProps) {
+export function ProjectsForm({ data, onChange, errors }: ProjectsFormProps) {
   const addEntry = () => {
     onChange([
       ...data,
@@ -229,6 +230,15 @@ export function ProjectsForm({ data, onChange }: ProjectsFormProps) {
           </div>
         </div>
       ))}
+
+      {/* Validation errors */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+          {Object.entries(errors).map(([key, msg]) => (
+            <p key={key} className="text-sm text-red-600">{msg}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

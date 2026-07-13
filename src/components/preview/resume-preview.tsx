@@ -165,35 +165,25 @@ export function ResumePreview({ snapshot }: ResumePreviewProps) {
       )}
 
       {/* Skills */}
-      {skills &&
-        ((Array.isArray(skills) && skills.length > 0) ||
-          (!Array.isArray(skills) && (skills as unknown[]).length > 0)) && (
-          <Section title="Skills">
-            <div className="flex flex-wrap gap-1.5">
-              {Array.isArray(skills)
-                ? (
-                    skills as Array<{
-                      name: string;
-                      category?: string;
-                      proficiency?: string;
-                    }>
-                  ).map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-                    >
-                      {skill.name}
-                      {skill.proficiency && (
-                        <span className="ml-1 text-slate-400">
-                          · {skill.proficiency}
-                        </span>
-                      )}
-                    </span>
-                  ))
-                : null}
-            </div>
-          </Section>
-        )}
+      {skills && skills.length > 0 && (
+        <Section title="Skills">
+          <div className="flex flex-wrap gap-1.5">
+            {skills.map((skill, idx) => (
+              <span
+                key={idx}
+                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+              >
+                {skill.name}
+                {skill.proficiency && (
+                  <span className="ml-1 text-slate-400">
+                    · {skill.proficiency}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Projects */}
       {projects && projects.length > 0 && (

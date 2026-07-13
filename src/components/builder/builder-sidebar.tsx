@@ -44,12 +44,12 @@ export function BuilderSidebar({
   completedSections,
 }: BuilderSidebarProps) {
   return (
-    <nav className="sticky top-20 hidden w-56 shrink-0 lg:block">
+    <nav className="sticky top-20 hidden w-56 shrink-0 lg:block" aria-label="Resume sections">
       <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
         <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
           Sections
         </p>
-        <ul className="space-y-0.5">
+        <ul className="space-y-0.5" role="list">
           {SECTIONS.map((section) => {
             const isActive = activeSection === section.id;
             const isCompleted = completedSections.has(section.id);
@@ -59,6 +59,8 @@ export function BuilderSidebar({
               <li key={section.id}>
                 <button
                   onClick={() => onSectionClick(section.id)}
+                  aria-label={`${section.label}${section.required ? " (required)" : ""}${isCompleted ? " (completed)" : ""}`}
+                  aria-current={isActive ? "true" : undefined}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all ${
                     isActive
                       ? "bg-blue-50 text-blue-700 shadow-sm"

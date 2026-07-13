@@ -250,8 +250,8 @@ export function CVBuilderForm({
     setSnapshot((prev) => ({
       ...prev,
       skills: [
-        ...((prev.skills as Array<{ name: string; category?: string }>) ?? []),
-        { name: "", category: "" },
+        ...(prev.skills ?? []),
+        { name: "", category: "", proficiency: "" },
       ],
     }));
     markDirty();
@@ -260,17 +260,14 @@ export function CVBuilderForm({
   const removeSkill = (index: number) => {
     setSnapshot((prev) => ({
       ...prev,
-      skills: ((prev.skills as Array<{ name: string; category?: string }>) ?? [
-      ]).filter((_, i) => i !== index),
+      skills: (prev.skills ?? []).filter((_, i) => i !== index),
     }));
     markDirty();
   };
 
   const updateSkill = (index: number, field: string, value: string) => {
     setSnapshot((prev) => {
-      const skills = [
-        ...((prev.skills as Array<{ name: string; category?: string }>) ?? []),
-      ];
+      const skills = [...(prev.skills ?? [])];
       skills[index] = { ...skills[index], [field]: value };
       return { ...prev, skills };
     });
@@ -849,17 +846,13 @@ export function CVBuilderForm({
           </button>
         </div>
 
-        {(
-          (snapshot.skills as Array<{ name: string; category?: string }>) ?? []
-        ).length === 0 && (
+        {(snapshot.skills ?? []).length === 0 && (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             No skills added yet.
           </p>
         )}
 
-        {(
-          (snapshot.skills as Array<{ name: string; category?: string }>) ?? []
-        ).map((skill, index) => (
+        {(snapshot.skills ?? []).map((skill, index) => (
           <div
             key={`skill-${index.toString()}`}
             className="mb-2 flex items-center gap-2"

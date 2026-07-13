@@ -7,17 +7,12 @@ import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { ResumeSnapshot } from "@/types/resume";
 
-type Skill = NonNonNullableSkills;
-type NonNonNullableSkills = NonNullable<
-  Extract<
-    ResumeSnapshot["skills"],
-    Array<{ name: string; category?: string; proficiency?: string }>
-  >
->[number];
+type Skill = NonNullable<ResumeSnapshot["skills"]>[number];
 
 interface SkillsFormProps {
   data: ResumeSnapshot["skills"];
   onChange: (data: ResumeSnapshot["skills"]) => void;
+  errors?: Record<string, string>;
 }
 
 const categories = [
@@ -51,17 +46,13 @@ const suggestions = [
   "Team Leadership",
 ];
 
-export function SkillsForm({ data, onChange }: SkillsFormProps) {
+export function SkillsForm({ data, onChange, errors }: SkillsFormProps) {
   const [newSkill, setNewSkill] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newProficiency, setNewProficiency] = useState("");
 
-  // Normalize to object array
-  const skills: Skill[] = Array.isArray(data)
-    ? data.map((s) =>
-        typeof s === "string" ? { name: s, category: "", proficiency: "" } : s,
-      )
-    : [];
+  // Data is now always in object form (normalized at load boundary)
+  const skills: Skill[] = Array.isArray(data) ? data : [];
 
   const addSkill = (name: string, category?: string, proficiency?: string) => {
     if (!name.trim()) return;
@@ -103,6 +94,7 @@ export function SkillsForm({ data, onChange }: SkillsFormProps) {
             <button
               key={s}
               onClick={() => addSkill(s)}
+              aria-label={`Add ${s} skill`}
               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
             >
               + {s}
@@ -188,6 +180,15 @@ export function SkillsForm({ data, onChange }: SkillsFormProps) {
       {skills.length === 0 && (
         <div className="rounded-xl border-2 border-dashed border-slate-200 py-8 text-center">
           <p className="text-sm text-slate-400">No skills added yet.</p>
+        </div>
+      )}
+
+      {/* Validation errors */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+          {Object.entries(errors).map(([key, msg]) => (
+            <p key={key} className="text-sm text-red-600">{msg}</p>
+          ))}
         </div>
       )}
     </div>

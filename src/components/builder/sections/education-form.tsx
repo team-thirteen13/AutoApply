@@ -18,9 +18,10 @@ type Education = NonNullable<ResumeSnapshot["education"]>[number];
 interface EducationFormProps {
   data: Education[];
   onChange: (data: Education[]) => void;
+  errors?: Record<string, string>;
 }
 
-export function EducationForm({ data, onChange }: EducationFormProps) {
+export function EducationForm({ data, onChange, errors }: EducationFormProps) {
   const addEntry = () => {
     onChange([
       ...data,
@@ -236,6 +237,15 @@ export function EducationForm({ data, onChange }: EducationFormProps) {
           </div>
         </div>
       ))}
+
+      {/* Validation errors */}
+      {errors && Object.keys(errors).length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
+          {Object.entries(errors).map(([key, msg]) => (
+            <p key={key} className="text-sm text-red-600">{msg}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

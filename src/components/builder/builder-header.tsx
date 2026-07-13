@@ -48,6 +48,7 @@ export function BuilderHeader({
             onChange={(e) => onTitleChange(e.target.value)}
             className="max-w-xs border-none bg-transparent text-lg font-semibold text-slate-900 focus:outline-none focus:ring-0"
             placeholder="Untitled Resume"
+            aria-label="Resume title"
           />
         </div>
 
@@ -80,6 +81,7 @@ export function BuilderHeader({
             size="sm"
             onClick={onSave}
             disabled={isSaving}
+            aria-label={isSaving ? "Saving..." : "Save resume"}
           >
             {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -93,6 +95,7 @@ export function BuilderHeader({
             size="sm"
             onClick={onSaveAndPreview}
             disabled={isSaving}
+            aria-label="Save and preview resume"
           >
             <Eye className="h-4 w-4" />
             <span className="hidden sm:inline">Preview</span>

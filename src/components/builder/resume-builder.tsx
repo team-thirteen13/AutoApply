@@ -23,6 +23,12 @@ import {
 } from "./sections";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { Toast } from "@/components/ui/toast";
+import {
+  validateSection,
+  findFirstInvalidSection,
+  type BuilderSectionId,
+} from "@/lib/validation/builder";
+import { normalizeSkills } from "@/lib/skills-normalize";
 
 interface ResumeBuilderProps {
   resumeId: string;
@@ -37,9 +43,15 @@ export function ResumeBuilder({
 }: ResumeBuilderProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
-  const [snapshot, setSnapshot] = useState<ResumeSnapshot>(
-    initialSnapshot ?? {},
-  );
+  const [snapshot, setSnapshot] = useState<ResumeSnapshot>(() => {
+    const initial = initialSnapshot ?? {};
+    // Normalize legacy string[] skills to object form at load boundary
+    // Create a copy to avoid mutating props
+    if (initial.skills) {
+      return { ...initial, skills: normalizeSkills(initial.skills) };
+    }
+    return initial;
+  });
   const [activeSection, setActiveSection] = useState("personal");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
@@ -48,6 +60,18 @@ export function ResumeBuilder({
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [sectionErrors, setSectionErrors] = useState<
+    Record<BuilderSectionId, Record<string, string>>
+  >({
+    personal: {},
+    summary: {},
+    experience: {},
+    education: {},
+    skills: {},
+    projects: {},
+    certifications: {},
+    languages: {},
+  });
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Mark dirty on changes
@@ -64,44 +88,56 @@ export function ResumeBuilder({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  // Calculate completion (computed inline, not via effect)
+  // Calculate completion using schema validation
   const completedSections = useMemo(() => {
     const completed = new Set<string>();
 
-    if (snapshot.profile?.name && snapshot.profile?.email) {
+    // Personal: name and email required
+    const personalResult = validateSection("personal", snapshot.profile ?? {});
+    if (personalResult.valid) {
       completed.add("personal");
     }
+
+    // Summary: optional, but complete if present and > 50 chars
     if (snapshot.summary && snapshot.summary.length > 50) {
       completed.add("summary");
     }
-    if (
-      snapshot.experiences &&
-      snapshot.experiences.length > 0 &&
-      snapshot.experiences.some((e) => e.company && e.title)
-    ) {
-      completed.add("experience");
+
+    // Experience: at least one valid entry
+    if (snapshot.experiences && snapshot.experiences.length > 0) {
+      const experienceResult = validateSection("experience", snapshot.experiences);
+      if (experienceResult.valid) {
+        completed.add("experience");
+      }
     }
-    if (
-      snapshot.education &&
-      snapshot.education.length > 0 &&
-      snapshot.education.some((e) => e.university && e.degree)
-    ) {
-      completed.add("education");
+
+    // Education: at least one valid entry
+    if (snapshot.education && snapshot.education.length > 0) {
+      const educationResult = validateSection("education", snapshot.education);
+      if (educationResult.valid) {
+        completed.add("education");
+      }
     }
-    const skills = snapshot.skills;
-    if (
-      skills &&
-      ((Array.isArray(skills) && skills.length > 0) ||
-        (!Array.isArray(skills) && (skills as unknown[]).length > 0))
-    ) {
-      completed.add("skills");
+
+    // Skills: at least one valid entry
+    if (snapshot.skills && snapshot.skills.length > 0) {
+      const skillsResult = validateSection("skills", snapshot.skills);
+      if (skillsResult.valid) {
+        completed.add("skills");
+      }
     }
+
+    // Projects: at least one entry
     if (snapshot.projects && snapshot.projects.length > 0) {
       completed.add("projects");
     }
+
+    // Certifications: at least one entry
     if (snapshot.certificates && snapshot.certificates.length > 0) {
       completed.add("certifications");
     }
+
+    // Languages: at least one entry
     if (snapshot.languages && snapshot.languages.length > 0) {
       completed.add("languages");
     }
@@ -172,10 +208,87 @@ export function ResumeBuilder({
     return result.data;
   };
 
+  // Validate all sections and collect errors
+  const validateAllSections = useCallback(() => {
+    const newErrors: Record<BuilderSectionId, Record<string, string>> = {
+      personal: {},
+      summary: {},
+      experience: {},
+      education: {},
+      skills: {},
+      projects: {},
+      certifications: {},
+      languages: {},
+    };
+
+    // Validate personal info
+    const personalResult = validateSection("personal", snapshot.profile ?? {});
+    if (!personalResult.valid) {
+      newErrors.personal = personalResult.errors;
+    }
+
+    // Validate experience entries
+    if (snapshot.experiences && snapshot.experiences.length > 0) {
+      const experienceResult = validateSection("experience", snapshot.experiences);
+      if (!experienceResult.valid) {
+        newErrors.experience = experienceResult.errors;
+      }
+    }
+
+    // Validate education entries
+    if (snapshot.education && snapshot.education.length > 0) {
+      const educationResult = validateSection("education", snapshot.education);
+      if (!educationResult.valid) {
+        newErrors.education = educationResult.errors;
+      }
+    }
+
+    // Validate skills entries
+    if (snapshot.skills && snapshot.skills.length > 0) {
+      const skillsResult = validateSection("skills", snapshot.skills);
+      if (!skillsResult.valid) {
+        newErrors.skills = skillsResult.errors;
+      }
+    }
+
+    setSectionErrors(newErrors);
+    return newErrors;
+  }, [snapshot]);
+
   // Save handler
   const handleSave = async (andPreview = false) => {
     if (!title.trim()) {
       setToast({ message: "Please enter a resume title", type: "error" });
+      return;
+    }
+
+    // Validate all sections before save
+    const errors = validateAllSections();
+    const hasErrors = Object.values(errors).some(
+      (e) => Object.keys(e).length > 0,
+    );
+
+    if (hasErrors) {
+      // Find first invalid section and navigate to it
+      const firstInvalid = findFirstInvalidSection({
+        profile: snapshot.profile,
+        summary: snapshot.summary,
+        experiences: snapshot.experiences,
+        education: snapshot.education,
+        skills: snapshot.skills,
+        projects: snapshot.projects,
+        certificates: snapshot.certificates,
+        languages: snapshot.languages,
+      });
+
+      if (firstInvalid) {
+        scrollToSection(firstInvalid);
+      }
+
+      setToast({
+        message: "Please fix validation errors before saving",
+        type: "error",
+      });
       return;
     }
 
@@ -254,7 +367,7 @@ export function ResumeBuilder({
               <PersonalInfoForm
                 data={snapshot.profile}
                 onChange={updateProfile}
-                errors={{}}
+                errors={sectionErrors.personal}
               />
             </div>
 
@@ -268,6 +381,7 @@ export function ResumeBuilder({
                 data={snapshot.summary ?? ""}
                 onChange={updateSummary}
                 onAiImprove={handleAiImproveSummary}
+                errors={sectionErrors.summary}
               />
             </div>
 
@@ -281,6 +395,7 @@ export function ResumeBuilder({
                 data={snapshot.experiences ?? []}
                 onChange={updateExperiences}
                 onAiImprove={handleAiImproveExperience}
+                errors={sectionErrors.experience}
               />
             </div>
 
@@ -293,6 +408,7 @@ export function ResumeBuilder({
               <EducationForm
                 data={snapshot.education ?? []}
                 onChange={updateEducation}
+                errors={sectionErrors.education}
               />
             </div>
 
@@ -305,6 +421,7 @@ export function ResumeBuilder({
               <SkillsForm
                 data={snapshot.skills}
                 onChange={updateSkills}
+                errors={sectionErrors.skills}
               />
             </div>
 
@@ -317,6 +434,7 @@ export function ResumeBuilder({
               <ProjectsForm
                 data={snapshot.projects ?? []}
                 onChange={updateProjects}
+                errors={sectionErrors.projects}
               />
             </div>
 
@@ -329,6 +447,7 @@ export function ResumeBuilder({
               <CertificationsForm
                 data={snapshot.certificates ?? []}
                 onChange={updateCertifications}
+                errors={sectionErrors.certifications}
               />
             </div>
 
@@ -341,6 +460,7 @@ export function ResumeBuilder({
               <LanguagesForm
                 data={snapshot.languages ?? []}
                 onChange={updateLanguages}
+                errors={sectionErrors.languages}
               />
             </div>
 
