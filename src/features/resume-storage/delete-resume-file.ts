@@ -1,8 +1,16 @@
 // ─────────────────────────────────────────────────────────────
 // Delete Resume File
 // ─────────────────────────────────────────────────────────────
-// Deletes a resume file from Supabase Storage.
+// Deletes a resume file from Supabase Storage with compensation.
 // Verifies ownership before deletion.
+//
+// Delete flow:
+// 1. Authenticate and verify resume ownership
+// 2. Read current file_path
+// 3. Conditionally clear file_path (WHERE file_path = expected)
+// 4. Remove storage object
+// 5. On storage failure: restore file_path (compensation)
+// 6. On restore failure: return consistency error
 // ─────────────────────────────────────────────────────────────
 
 import "server-only";
@@ -59,33 +67,71 @@ export async function deleteResumeFile(
       };
     }
 
-    // 4. Delete from storage
+    const filePath = resume.file_path as string;
     const bucket = getStorageBucket();
-    const { error: deleteError } = await supabase.storage
-      .from(bucket)
-      .remove([resume.file_path]);
 
-    if (deleteError) {
-      return {
-        success: false,
-        error: { code: "unexpected", message: "Failed to delete file" },
-      };
-    }
-
-    // 5. Clear file_path from resume record
-    const { error: updateError } = await supabase
+    // 4. Conditionally clear file_path (prevents clearing a newer path).
+    // Use select() to verify the row was actually updated — if file_path
+    // changed concurrently, zero rows match and we must not proceed.
+    const { data: clearedRow, error: clearError } = await supabase
       .from("resumes")
       .update({ file_path: null })
       .eq("id", resumeId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("file_path", filePath)
+      .select("id")
+      .single();
 
-    if (updateError) {
+    if (clearError) {
       return {
         success: false,
         error: { code: "unexpected", message: "Failed to update resume record" },
       };
     }
 
+    // If zero rows matched, file_path was changed concurrently — abort
+    // without touching storage.
+    if (!clearedRow) {
+      return {
+        success: false,
+        error: {
+          code: "conflict",
+          message: "File metadata changed concurrently, please retry",
+        },
+      };
+    }
+
+    // 5. Remove storage object
+    const { error: deleteError } = await supabase.storage
+      .from(bucket)
+      .remove([filePath]);
+
+    if (deleteError) {
+      // Compensation: restore file_path on storage failure
+      const { error: restoreError } = await supabase
+        .from("resumes")
+        .update({ file_path: filePath })
+        .eq("id", resumeId)
+        .eq("user_id", user.id);
+
+      if (restoreError) {
+        return {
+          success: false,
+          error: {
+            code: "unexpected",
+            message: "Delete failed and metadata could not be restored",
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: { code: "unexpected", message: "Failed to delete file" },
+      };
+    }
+
+    // 6. Success — file_path cleared, storage removed
+    // Revalidate only after complete success
     return {
       success: true,
       data: { deleted: true },

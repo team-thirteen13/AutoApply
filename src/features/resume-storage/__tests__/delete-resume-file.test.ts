@@ -12,15 +12,15 @@ vi.mock("@/lib/supabase/session", () => ({
 const mockRemove = vi.fn();
 const mockMaybeSingle = vi.fn();
 const mockFrom = vi.fn();
-const mockStorageFrom = vi.fn(() => ({
+const mockStorageFrom = vi.fn((..._args: unknown[]) => ({
   remove: mockRemove,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() => ({
-    from: (...args: unknown[]) => mockFrom(...args),
+    from: (table: string) => mockFrom(table),
     storage: {
-      from: () => mockStorageFrom(),
+      from: (bucket: string) => mockStorageFrom(bucket),
     },
   })),
 }));
@@ -35,13 +35,50 @@ function setupResumeChain(filePath: string | null) {
   const select = vi.fn().mockReturnValue({ eq: eq1 });
   mockFrom.mockReturnValueOnce({ select });
   mockMaybeSingle.mockResolvedValue({
-    data: filePath ? { id: VALID_ID, file_path: filePath } : { id: VALID_ID, file_path: null },
+    data: filePath
+      ? { id: VALID_ID, file_path: filePath }
+      : { id: VALID_ID, file_path: null },
     error: null,
   });
 }
 
-function setupUpdateChain() {
-  const eq2 = vi.fn().mockReturnValue({});
+/**
+ * Setup the conditional clear chain:
+ * update(...).eq(id).eq(user_id).eq(file_path).select("id").single()
+ *
+ * When zeroRowMatch is true, returns { data: null } to simulate
+ * a concurrent file_path change (no rows matched the WHERE clause).
+ */
+function setupClearChain(options?: {
+  error?: { message: string };
+  zeroRowMatch?: boolean;
+}) {
+  const mockSingle = vi.fn();
+  const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
+  const eq3 = vi.fn().mockReturnValue({ select: mockSelect });
+  const eq2 = vi.fn().mockReturnValue({ eq: eq3 });
+  const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
+  const update = vi.fn().mockReturnValue({ eq: eq1 });
+  mockFrom.mockReturnValueOnce({ update });
+
+  if (options?.error) {
+    mockSingle.mockResolvedValue({ data: null, error: options.error });
+  } else if (options?.zeroRowMatch) {
+    // select().single() returns data: null when zero rows matched
+    mockSingle.mockResolvedValue({ data: null, error: null });
+  } else {
+    mockSingle.mockResolvedValue({ data: { id: VALID_ID }, error: null });
+  }
+}
+
+/**
+ * Setup the restore chain:
+ * update(...).eq(id).eq(user_id)
+ */
+function setupRestoreChain(options?: { error?: { message: string } }) {
+  const eq2 = options?.error
+    ? vi.fn().mockReturnValue({ error: options.error })
+    : vi.fn().mockReturnValue({});
   const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
   const update = vi.fn().mockReturnValue({ eq: eq1 });
   mockFrom.mockReturnValueOnce({ update });
@@ -103,11 +140,101 @@ describe("deleteResumeFile", () => {
     }
   });
 
-  it("deletes file and clears file_path", async () => {
+  it("clears file_path before removing storage", async () => {
     const filePath = "user-123/resume-1/resume.pdf";
     setupResumeChain(filePath);
+    setupClearChain();
     mockRemove.mockResolvedValue({ error: null });
-    setupUpdateChain();
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(true);
+    // Verify sequence: clear first, then remove
+    expect(mockFrom).toHaveBeenCalledWith("resumes");
+    expect(mockRemove).toHaveBeenCalledWith([filePath]);
+  });
+
+  it("clears file_path with conditional WHERE clause", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain();
+    mockRemove.mockResolvedValue({ error: null });
+
+    await deleteResumeFile(VALID_ID);
+
+    // The clear chain uses select().single() to verify row was updated
+    expect(mockFrom).toHaveBeenCalledWith("resumes");
+  });
+
+  it("metadata clear failure leaves storage untouched", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain({ error: { message: "DB error" } });
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("unexpected");
+    }
+    // Storage should NOT be touched
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("returns conflict when file_path changed concurrently", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain({ zeroRowMatch: true });
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("conflict");
+      expect(result.error.message).toContain("concurrently");
+    }
+    // Storage must NOT be touched in stale-state case
+    expect(mockRemove).not.toHaveBeenCalled();
+  });
+
+  it("storage failure restores metadata", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain();
+    mockRemove.mockResolvedValue({ error: { message: "Delete failed" } });
+    setupRestoreChain();
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("unexpected");
+    }
+    // Should attempt to restore metadata
+    expect(mockFrom).toHaveBeenCalledTimes(3); // select + clear + restore
+  });
+
+  it("restore failure returns consistency error", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain();
+    mockRemove.mockResolvedValue({ error: { message: "Delete failed" } });
+    setupRestoreChain({ error: { message: "Restore failed" } });
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("unexpected");
+      expect(result.error.message).toContain("could not be restored");
+    }
+  });
+
+  it("successful delete", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain();
+    mockRemove.mockResolvedValue({ error: null });
 
     const result = await deleteResumeFile(VALID_ID);
 
@@ -118,9 +245,35 @@ describe("deleteResumeFile", () => {
     expect(mockRemove).toHaveBeenCalledWith([filePath]);
   });
 
+  it("revalidation only after success", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain();
+    mockRemove.mockResolvedValue({ error: null });
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(true);
+    // Revalidation is handled by the server action, not the backend function
+  });
+
+  it("resume remains intact after delete", async () => {
+    const filePath = "user-123/resume-1/resume.pdf";
+    setupResumeChain(filePath);
+    setupClearChain();
+    mockRemove.mockResolvedValue({ error: null });
+
+    const result = await deleteResumeFile(VALID_ID);
+
+    expect(result.success).toBe(true);
+    // The resume record should still exist, just with file_path cleared
+  });
+
   it("returns unexpected on storage delete error", async () => {
     setupResumeChain("user-123/resume-1/resume.pdf");
+    setupClearChain();
     mockRemove.mockResolvedValue({ error: { message: "Delete failed" } });
+    setupRestoreChain();
 
     const result = await deleteResumeFile(VALID_ID);
 

@@ -63,6 +63,10 @@ vi.mock("@/components/ui/confirm-dialog", () => ({
     ) : null,
 }));
 
+vi.mock("@/components/dashboard/file-management", () => ({
+  FileManagement: () => <div data-testid="file-management" />,
+}));
+
 // ── Import after mocks ─────────────────────────────────────
 
 import { ResumeCard } from "@/components/dashboard/resume-card";
@@ -74,6 +78,7 @@ const mockResume = {
   userId: "user-1",
   title: "Software Engineer Resume",
   targetRole: "Senior Developer",
+  filePath: null,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-15T10:30:00Z",
 };

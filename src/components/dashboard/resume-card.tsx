@@ -6,6 +6,7 @@ import { Pencil, Eye, Trash2, MoreVertical } from "lucide-react";
 import type { Resume } from "@/types/resume";
 import { deleteResumeAction } from "@/app/dashboard/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FileManagement } from "./file-management";
 
 interface ResumeCardProps {
   resume: Resume;
@@ -75,6 +76,15 @@ export function ResumeCard({ resume }: ResumeCardProps) {
         </span>
         <span className="text-xs text-slate-400">·</span>
         <span className="text-xs text-slate-400">{updatedAgo}</span>
+      </div>
+
+      {/* File Management */}
+      <div className="mb-4">
+        <FileManagement
+          resumeId={resume.id}
+          resumeTitle={resume.title}
+          filePath={resume.filePath}
+        />
       </div>
 
       {/* Actions */}

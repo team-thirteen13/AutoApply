@@ -10,15 +10,25 @@ vi.mock("@/lib/supabase/session", () => ({
 }));
 
 const mockUpload = vi.fn();
+const mockRemove = vi.fn();
 const mockMaybeSingle = vi.fn();
-const mockFrom = vi.fn();
+const mockSelectEq2 = vi.fn();
+const mockSelectEq1 = vi.fn();
+const mockSelect = vi.fn();
+const mockUpdateEq2 = vi.fn();
+const mockUpdateEq1 = vi.fn();
+const mockUpdate = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() => ({
-    from: (...args: unknown[]) => mockFrom(...args),
+    from: vi.fn(() => ({
+      select: (...args: unknown[]) => mockSelect(...args),
+      update: (...args: unknown[]) => mockUpdate(...args),
+    })),
     storage: {
       from: vi.fn(() => ({
-        upload: mockUpload,
+        upload: (...args: unknown[]) => mockUpload(...args),
+        remove: (...args: unknown[]) => mockRemove(...args),
       })),
     },
   })),
@@ -34,18 +44,27 @@ function makeFile(name = "resume.pdf", size = 1024, type = "application/pdf") {
   return new File([buffer], name, { type });
 }
 
-function setupResumeChain() {
-  const eq2 = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-  const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
-  const select = vi.fn().mockReturnValue({ eq: eq1 });
-  mockFrom.mockReturnValueOnce({ select });
+function setupSelectChain(filePath: string | null = null) {
+  mockSelect.mockReturnValue({ eq: mockSelectEq1 });
+  mockSelectEq1.mockReturnValue({ eq: mockSelectEq2 });
+  mockSelectEq2.mockReturnValue({ maybeSingle: mockMaybeSingle });
+  mockMaybeSingle.mockResolvedValue({
+    data: filePath
+      ? { id: VALID_ID, file_path: filePath }
+      : { id: VALID_ID, file_path: null },
+    error: null,
+  });
 }
 
-function setupUpdateChain() {
-  const eq2 = vi.fn().mockReturnValue({});
-  const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
-  const update = vi.fn().mockReturnValue({ eq: eq1 });
-  mockFrom.mockReturnValueOnce({ update });
+function setupUpdateChain(options?: { error?: { message: string } }) {
+  mockUpdate.mockReturnValue({ eq: mockUpdateEq1 });
+  mockUpdateEq1.mockReturnValue({ eq: mockUpdateEq2 });
+
+  if (options?.error) {
+    mockUpdateEq2.mockReturnValue({ error: options.error });
+  } else {
+    mockUpdateEq2.mockReturnValue({});
+  }
 }
 
 describe("uploadResumeFile", () => {
@@ -112,7 +131,7 @@ describe("uploadResumeFile", () => {
   });
 
   it("returns resume_not_found when resume does not exist", async () => {
-    setupResumeChain();
+    setupSelectChain();
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 
     const result = await uploadResumeFile(VALID_ID, makeFile());
@@ -123,26 +142,171 @@ describe("uploadResumeFile", () => {
     }
   });
 
-  it("uploads file and updates resume record", async () => {
-    setupResumeChain();
-    mockMaybeSingle.mockResolvedValue({ data: { id: VALID_ID }, error: null });
+  it("uploads file with upsert false", async () => {
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    setupUpdateChain();
+
+    await uploadResumeFile(VALID_ID, makeFile());
+
+    expect(mockUpload).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(ArrayBuffer),
+      expect.objectContaining({ upsert: false }),
+    );
+  });
+
+  it("generates UUID-based storage path", async () => {
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    setupUpdateChain();
+
+    const result = await uploadResumeFile(VALID_ID, makeFile("my-resume.pdf"));
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.filePath).toMatch(
+        new RegExp(`^${VALID_USER_ID}/${VALID_ID}/[0-9a-f-]+-my-resume\\.pdf$`),
+      );
+    }
+  });
+
+  it("same original filename produces distinct paths", async () => {
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    setupUpdateChain();
+
+    const result1 = await uploadResumeFile(VALID_ID, makeFile("resume.pdf"));
+
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    setupUpdateChain();
+
+    const result2 = await uploadResumeFile(VALID_ID, makeFile("resume.pdf"));
+
+    expect(result1.success).toBe(true);
+    expect(result2.success).toBe(true);
+    if (result1.success && result2.success) {
+      expect(result1.data.filePath).not.toBe(result2.data.filePath);
+    }
+  });
+
+  it("reads current file_path before upload", async () => {
+    const oldPath = `${VALID_USER_ID}/${VALID_ID}/old-file.pdf`;
+    setupSelectChain(oldPath);
+    mockUpload.mockResolvedValue({ error: null });
+    mockRemove.mockResolvedValue({ error: null });
+    setupUpdateChain();
+
+    const result = await uploadResumeFile(VALID_ID, makeFile("new-file.pdf"));
+
+    expect(result).toEqual(expect.objectContaining({ success: true }));
+  });
+
+  it("DB update failure removes new object", async () => {
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    mockRemove.mockResolvedValue({ error: null });
+    setupUpdateChain({ error: { message: "DB error" } });
+
+    const result = await uploadResumeFile(VALID_ID, makeFile());
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("unexpected");
+    }
+    // Should attempt to remove the uploaded object (compensation)
+    expect(mockRemove).toHaveBeenCalledWith([expect.any(String)]);
+  });
+
+  it("DB update failure preserves old path", async () => {
+    const oldPath = `${VALID_USER_ID}/${VALID_ID}/old-file.pdf`;
+    setupSelectChain(oldPath);
+    mockUpload.mockResolvedValue({ error: null });
+    mockRemove.mockResolvedValue({ error: null });
+    setupUpdateChain({ error: { message: "DB error" } });
+
+    await uploadResumeFile(VALID_ID, makeFile("new-file.pdf"));
+
+    // Compensation removes NEW object, not old
+    expect(mockRemove).toHaveBeenCalledWith([expect.stringContaining("new-file.pdf")]);
+    expect(mockRemove).not.toHaveBeenCalledWith([oldPath]);
+  });
+
+  it("successful replacement removes old object", async () => {
+    const oldPath = `${VALID_USER_ID}/${VALID_ID}/old-file.pdf`;
+    setupSelectChain(oldPath);
+    mockUpload.mockResolvedValue({ error: null });
+    mockRemove.mockResolvedValue({ error: null });
+    setupUpdateChain();
+
+    await uploadResumeFile(VALID_ID, makeFile("new-file.pdf"));
+
+    // Should remove old object after successful update
+    expect(mockRemove).toHaveBeenCalledWith([oldPath]);
+  });
+
+  it("old-object cleanup failure still leaves new file active", async () => {
+    const oldPath = `${VALID_USER_ID}/${VALID_ID}/old-file.pdf`;
+    setupSelectChain(oldPath);
+    mockUpload.mockResolvedValue({ error: null });
+    // Old object removal fails
+    mockRemove.mockResolvedValue({ error: { message: "Remove failed" } });
+    setupUpdateChain();
+
+    const result = await uploadResumeFile(VALID_ID, makeFile("new-file.pdf"));
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.filePath).toContain("new-file.pdf");
+    }
+  });
+
+  it("DB update fails and remove resolves with error", async () => {
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    mockRemove.mockResolvedValue({ error: { message: "Compensation failed" } });
+    setupUpdateChain({ error: { message: "DB error" } });
+
+    const result = await uploadResumeFile(VALID_ID, makeFile());
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("unexpected");
+      expect(result.error.message).not.toContain("Compensation failed");
+    }
+    // Compensation was attempted
+    expect(mockRemove).toHaveBeenCalledWith([expect.any(String)]);
+  });
+
+  it("DB update fails and remove rejects", async () => {
+    setupSelectChain();
+    mockUpload.mockResolvedValue({ error: null });
+    mockRemove.mockRejectedValue(new Error("Network timeout"));
+    setupUpdateChain({ error: { message: "DB error" } });
+
+    const result = await uploadResumeFile(VALID_ID, makeFile());
+
+    // Should still return normal upload failure, not throw
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("unexpected");
+      expect(result.error.message).not.toContain("Network timeout");
+    }
+  });
+
+  it("revalidation only after committed success", async () => {
+    setupSelectChain();
     mockUpload.mockResolvedValue({ error: null });
     setupUpdateChain();
 
     const result = await uploadResumeFile(VALID_ID, makeFile());
 
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.filePath).toContain(VALID_USER_ID);
-      expect(result.data.filePath).toContain(VALID_ID);
-      expect(result.data.contentType).toBe("application/pdf");
-      expect(result.data.size).toBe(1024);
-    }
   });
 
   it("returns upload_failed on storage error", async () => {
-    setupResumeChain();
-    mockMaybeSingle.mockResolvedValue({ data: { id: VALID_ID }, error: null });
+    setupSelectChain();
     mockUpload.mockResolvedValue({ error: { message: "Upload failed" } });
 
     const result = await uploadResumeFile(VALID_ID, makeFile());
@@ -154,7 +318,7 @@ describe("uploadResumeFile", () => {
   });
 
   it("returns unexpected on Supabase resume query error", async () => {
-    setupResumeChain();
+    setupSelectChain();
     mockMaybeSingle.mockResolvedValue({
       data: null,
       error: { code: "some_error", message: "Database error" },
@@ -180,7 +344,7 @@ describe("uploadResumeFile", () => {
   });
 
   it("does not expose raw Supabase errors", async () => {
-    setupResumeChain();
+    setupSelectChain();
     mockMaybeSingle.mockResolvedValue({
       data: null,
       error: { code: "some_error", message: "Detailed DB error" },

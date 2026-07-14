@@ -48,6 +48,7 @@ const DB_ROW = {
   user_id: "user-123",
   title: "Updated Title",
   target_role: "Tech Lead",
+  file_path: null,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-06-01T00:00:00Z",
 };
@@ -108,7 +109,7 @@ describe("updateResume", () => {
     // Read query
     expect(mockFrom).toHaveBeenCalledWith("resumes");
     expect(mockReadSelect).toHaveBeenCalledWith(
-      "id, user_id, title, target_role, created_at, updated_at",
+      "id, user_id, title, target_role, file_path, created_at, updated_at",
     );
     expect(mockReadEq1).toHaveBeenCalledWith("id", VALID_ID);
     expect(mockReadEq2).toHaveBeenCalledWith("user_id", "user-123");
