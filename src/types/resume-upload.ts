@@ -47,6 +47,7 @@ export type ResumeUploadErrorCode =
   | "empty_file"
   | "upload_failed"
   | "not_found"
+  | "conflict"
   | "validation_error"
   | "unexpected";
 

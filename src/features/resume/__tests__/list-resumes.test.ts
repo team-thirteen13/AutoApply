@@ -34,6 +34,7 @@ const DB_ROW = {
   user_id: "user-123",
   title: "Software Engineer",
   target_role: "Senior Engineer",
+  file_path: null,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-06-01T00:00:00Z",
 };
@@ -43,6 +44,7 @@ const MAPPED = {
   userId: "user-123",
   title: "Software Engineer",
   targetRole: "Senior Engineer",
+  filePath: null,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-06-01T00:00:00Z",
 };
@@ -73,7 +75,7 @@ describe("listResumes", () => {
 
     expect(mockFrom).toHaveBeenCalledWith("resumes");
     expect(mockSelect).toHaveBeenCalledWith(
-      "id, user_id, title, target_role, created_at, updated_at",
+      "id, user_id, title, target_role, file_path, created_at, updated_at",
     );
     expect(mockEq).toHaveBeenCalledWith("user_id", "user-123");
     expect(mockOrder).toHaveBeenCalledWith("created_at", { ascending: false });

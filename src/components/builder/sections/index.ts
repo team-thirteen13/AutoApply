@@ -6,3 +6,4 @@ export { SkillsForm } from "./skills-form";
 export { ProjectsForm } from "./projects-form";
 export { CertificationsForm } from "./certifications-form";
 export { LanguagesForm } from "./languages-form";
+export { FileUploadForm } from "./file-upload-form";

@@ -18,6 +18,7 @@ export type ResumeRow = {
   user_id: string;
   title: string;
   target_role: string | null;
+  file_path: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -25,7 +26,7 @@ export type ResumeRow = {
 // ── Explicit column selection ────────────────────────────────
 
 export const RESUME_COLUMNS =
-  "id, user_id, title, target_role, created_at, updated_at";
+  "id, user_id, title, target_role, file_path, created_at, updated_at";
 
 // ── Row → domain ────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export function toResume(row: ResumeRow): Resume {
     userId: row.user_id,
     title: row.title,
     targetRole: row.target_role,
+    filePath: row.file_path,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

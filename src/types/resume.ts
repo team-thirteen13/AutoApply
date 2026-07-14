@@ -98,6 +98,7 @@ export interface Resume {
   userId: string;
   title: string;
   targetRole: string | null;
+  filePath: string | null;
   createdAt: string;
   updatedAt: string;
 }

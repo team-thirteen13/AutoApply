@@ -79,6 +79,7 @@ vi.mock("@/components/builder/sections", () => ({
   ProjectsForm: () => <div data-testid="projects-form" />,
   CertificationsForm: () => <div data-testid="certifications-form" />,
   LanguagesForm: () => <div data-testid="languages-form" />,
+  FileUploadForm: () => <div data-testid="file-upload-form" />,
 }));
 
 // ── Import after mocks ─────────────────────────────────────

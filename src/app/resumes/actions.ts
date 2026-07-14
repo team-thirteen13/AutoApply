@@ -312,3 +312,87 @@ export async function createResumeWithSnapshotAction(
 export async function getProfileAction() {
   return getProfile();
 }
+
+// ─────────────────────────────────────────────────────────────
+// File Management Actions
+// ─────────────────────────────────────────────────────────────
+// Server actions for resume file upload, download, and deletion.
+// Wraps existing resume-storage functions for client use.
+// ─────────────────────────────────────────────────────────────
+
+import {
+  uploadResumeFile,
+  getResumeFileUrl,
+  deleteResumeFile,
+} from "@/features/resume-storage";
+
+export type FileActionResult =
+  | { success: true; data: unknown }
+  | { success: false; error: string };
+
+// ── Upload file to resume ───────────────────────────────────
+
+export async function uploadResumeFileAction(
+  resumeId: string,
+  file: File,
+): Promise<FileActionResult> {
+  const result = await uploadResumeFile(resumeId, file);
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error.message,
+    };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/resumes/${resumeId}/edit`);
+
+  return {
+    success: true,
+    data: result.data,
+  };
+}
+
+// ── Get signed URL for resume file ──────────────────────────
+
+export async function getResumeFileUrlAction(
+  resumeId: string,
+): Promise<FileActionResult> {
+  const result = await getResumeFileUrl(resumeId);
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error.message,
+    };
+  }
+
+  return {
+    success: true,
+    data: result.data,
+  };
+}
+
+// ── Delete resume file ──────────────────────────────────────
+
+export async function deleteResumeFileAction(
+  resumeId: string,
+): Promise<FileActionResult> {
+  const result = await deleteResumeFile(resumeId);
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error.message,
+    };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/resumes/${resumeId}/edit`);
+
+  return {
+    success: true,
+    data: result.data,
+  };
+}

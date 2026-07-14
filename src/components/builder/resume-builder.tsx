@@ -22,6 +22,7 @@ import {
   ProjectsForm,
   CertificationsForm,
   LanguagesForm,
+  FileUploadForm,
 } from "./sections";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { VersionHistory } from "./version-history";
@@ -39,12 +40,14 @@ interface ResumeBuilderProps {
   resumeId: string;
   initialTitle: string;
   initialSnapshot?: ResumeSnapshot;
+  initialFilePath?: string | null;
 }
 
 export function ResumeBuilder({
   resumeId,
   initialTitle,
   initialSnapshot,
+  initialFilePath,
 }: ResumeBuilderProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
@@ -540,6 +543,12 @@ export function ResumeBuilder({
                 errors={sectionErrors.languages}
               />
             </div>
+
+            {/* File Upload */}
+            <FileUploadForm
+              resumeId={resumeId}
+              existingFile={initialFilePath ? { filePath: initialFilePath } : null}
+            />
 
             {/* Preview section */}
             <div
