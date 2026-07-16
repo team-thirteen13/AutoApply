@@ -1,0 +1,83 @@
+# Roadmap: AutoApply Landing Page
+
+## Overview
+
+A 3-phase delivery of the AutoApply marketing landing page. Phase 1 establishes the foundation: page structure, navigation, hero section with sign-up CTA, and bold visual identity. Phase 2 builds out all content sections: feature showcase, AI workflow preview, and testimonials. Phase 3 completes the page with the footer and applies responsive, accessibility, and performance polish across the entire page. Each phase delivers a verifiable, user-facing capability.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: Foundation & Hero** - Page structure, navigation, hero section with sign-up CTA, and bold visual identity
+- [ ] **Phase 2: Content Sections** - Feature showcase, AI workflow preview, and testimonials/social proof
+- [ ] **Phase 3: Footer & Polish** - Footer, full responsive testing, accessibility, and performance verification
+
+## Phase Details
+
+### Phase 1: Foundation & Hero
+**Goal**: Visitors land on a polished page and immediately understand what AutoApply does, with a clear path to sign up
+**Mode:** mvp
+**Depends on**: Nothing (first phase)
+**Requirements**: LP-01, LP-05, LP-07
+**Success Criteria** (what must be TRUE):
+  1. Visitor sees a hero section with a clear headline, subheadline, and sign-up CTA button within 5 seconds of loading the page
+  2. Clicking the sign-up CTA navigates to the existing sign-up page
+  3. Navigation bar is sticky, shows AutoApply logo, and displays Sign Up / Sign In links when logged out, or Dashboard link when logged in
+  4. The page loads with bold typography (Space Grotesk headings, Inter body) and a cohesive color palette inspired by Stripe/Notion
+  5. The layout renders correctly at 375px (mobile), 768px (tablet), and 1024px+ (desktop) without horizontal scrolling
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: TBD
+- [ ] 01-02: TBD
+- [ ] 01-03: TBD
+
+### Phase 2: Content Sections
+**Goal**: Visitors can explore AutoApply's current features and preview the AI roadmap, building confidence through social proof
+**Mode:** mvp
+**Depends on**: Phase 1
+**Requirements**: LP-02, LP-03, LP-04
+**Success Criteria** (what must be TRUE):
+  1. Feature showcase section displays 4-6 resume builder features with icons and short descriptions
+  2. AI workflow preview section shows the upcoming pipeline (resume analysis, job matching, cover letters, ATS scoring) as a visual walkthrough
+  3. Testimonials section displays 3-6 testimonial cards with names, titles, companies, and photos
+  4. At least one additional sign-up CTA appears below the content sections (repeated from hero)
+  5. All content sections are responsive and maintain readability on mobile viewports
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: TBD
+- [ ] 02-02: TBD
+- [ ] 02-03: TBD
+
+### Phase 3: Footer & Polish
+**Goal**: The complete landing page is production-ready with a comprehensive footer, full responsive coverage, and verified accessibility and performance
+**Mode:** mvp
+**Depends on**: Phase 2
+**Requirements**: LP-06, LP-08
+**Success Criteria** (what must be TRUE):
+  1. Footer displays a 4-column layout with Product, Resources, Company, and Legal link sections, social icons, and copyright
+  2. Every section of the page renders correctly at 375px, 768px, 1024px, and 1440px viewports
+  3. The page passes keyboard-only navigation testing (all interactive elements focusable, no focus traps)
+  4. Lighthouse performance score is above 90, LCP is under 2.5 seconds, and CLS is under 0.1
+  5. Animations respect `prefers-reduced-motion` and no layout shifts occur during page load
+**Plans**: TBD
+
+Plans:
+- [ ] 03-01: TBD
+- [ ] 03-02: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Foundation & Hero | 0/3 | Not started | - |
+| 2. Content Sections | 0/3 | Not started | - |
+| 3. Footer & Polish | 0/2 | Not started | - |
