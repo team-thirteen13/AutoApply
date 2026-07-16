@@ -210,24 +210,31 @@ export function ExperienceForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Job Title" required>
+            <FormField label="Job Title" htmlFor={`exp-${idx}-title`} required error={errors?.[`${idx}.title`]}>
               <Input
+                id={`exp-${idx}-title`}
                 value={exp.title}
                 onChange={(e) => updateEntry(idx, "title", e.target.value)}
                 placeholder="Software Engineer"
+                aria-invalid={Boolean(errors?.[`${idx}.title`])}
+                aria-describedby={errors?.[`${idx}.title`] ? `exp-${idx}-title-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Company" required>
+            <FormField label="Company" htmlFor={`exp-${idx}-company`} required error={errors?.[`${idx}.company`]}>
               <Input
+                id={`exp-${idx}-company`}
                 value={exp.company}
                 onChange={(e) => updateEntry(idx, "company", e.target.value)}
                 placeholder="Acme Inc."
+                aria-invalid={Boolean(errors?.[`${idx}.company`])}
+                aria-describedby={errors?.[`${idx}.company`] ? `exp-${idx}-company-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Employment Type">
+            <FormField label="Employment Type" htmlFor={`exp-${idx}-employmentType`}>
               <Select
+                id={`exp-${idx}-employmentType`}
                 value={exp.employmentType ?? ""}
                 onChange={(e) =>
                   updateEntry(idx, "employmentType", e.target.value)
@@ -237,30 +244,37 @@ export function ExperienceForm({
               />
             </FormField>
 
-            <FormField label="Location">
+            <FormField label="Location" htmlFor={`exp-${idx}-location`}>
               <Input
+                id={`exp-${idx}-location`}
                 value={exp.location ?? ""}
                 onChange={(e) => updateEntry(idx, "location", e.target.value)}
                 placeholder="San Francisco, CA"
               />
             </FormField>
 
-            <FormField label="Start Date" required>
+            <FormField label="Start Date" htmlFor={`exp-${idx}-startDate`} required error={errors?.[`${idx}.startDate`]}>
               <Input
+                id={`exp-${idx}-startDate`}
                 type="month"
                 value={toMonthInputValue(exp.startDate)}
                 onChange={(e) => updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))}
+                aria-invalid={Boolean(errors?.[`${idx}.startDate`])}
+                aria-describedby={errors?.[`${idx}.startDate`] ? `exp-${idx}-startDate-error` : undefined}
               />
             </FormField>
 
-            <FormField label="End Date">
+            <FormField label="End Date" htmlFor={`exp-${idx}-endDate`} error={errors?.[`${idx}.endDate`]}>
               <Input
+                id={`exp-${idx}-endDate`}
                 type="month"
                 value={toMonthInputValue(exp.endDate)}
                 onChange={(e) =>
                   updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
                 disabled={exp.isCurrent}
+                aria-invalid={Boolean(errors?.[`${idx}.endDate`])}
+                aria-describedby={errors?.[`${idx}.endDate`] ? `exp-${idx}-endDate-error` : undefined}
               />
             </FormField>
 
@@ -281,8 +295,9 @@ export function ExperienceForm({
             </div>
 
             <div className="sm:col-span-2">
-              <FormField label="Description">
+              <FormField label="Description" htmlFor={`exp-${idx}-description`}>
                 <Textarea
+                  id={`exp-${idx}-description`}
                   value={exp.description ?? ""}
                   onChange={(e) =>
                     updateEntry(idx, "description", e.target.value)
@@ -296,9 +311,11 @@ export function ExperienceForm({
             <div className="sm:col-span-2">
               <FormField
                 label="Achievement Bullet Points"
+                htmlFor={`exp-${idx}-accomplishments`}
                 hint="One per line"
               >
                 <Textarea
+                  id={`exp-${idx}-accomplishments`}
                   value={(exp.accomplishments ?? []).join("\n")}
                   onChange={(e) =>
                     updateEntry(

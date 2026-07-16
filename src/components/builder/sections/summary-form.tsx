@@ -69,11 +69,6 @@ export function SummaryForm({ data, onChange, onAiImprove, errors }: SummaryForm
           aria-invalid={!!errors?.summary}
           aria-describedby={errors?.summary ? "summary-error" : undefined}
         />
-        {errors?.summary && (
-          <p id="summary-error" className="mt-1 text-xs text-red-500" role="alert">
-            {errors.summary}
-          </p>
-        )}
       </FormField>
 
       {/* AI Improve */}
@@ -104,7 +99,7 @@ export function SummaryForm({ data, onChange, onAiImprove, errors }: SummaryForm
         </div>
 
         {error && (
-          <p className="mt-2 text-xs text-red-500">{error}</p>
+          <p role="alert" className="mt-2 text-xs text-red-500">{error}</p>
         )}
 
         {improved && (

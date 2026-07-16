@@ -142,26 +142,33 @@ export function EducationForm({ data, onChange, errors }: EducationFormProps) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Institution" required>
+            <FormField label="Institution" htmlFor={`edu-${idx}-university`} required error={errors?.[`${idx}.university`]}>
               <Input
+                id={`edu-${idx}-university`}
                 value={edu.university}
                 onChange={(e) =>
                   updateEntry(idx, "university", e.target.value)
                 }
                 placeholder="MIT"
+                aria-invalid={Boolean(errors?.[`${idx}.university`])}
+                aria-describedby={errors?.[`${idx}.university`] ? `edu-${idx}-university-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Degree" required>
+            <FormField label="Degree" htmlFor={`edu-${idx}-degree`} required error={errors?.[`${idx}.degree`]}>
               <Input
+                id={`edu-${idx}-degree`}
                 value={edu.degree}
                 onChange={(e) => updateEntry(idx, "degree", e.target.value)}
                 placeholder="Bachelor of Science"
+                aria-invalid={Boolean(errors?.[`${idx}.degree`])}
+                aria-describedby={errors?.[`${idx}.degree`] ? `edu-${idx}-degree-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Field of Study">
+            <FormField label="Field of Study" htmlFor={`edu-${idx}-fieldOfStudy`}>
               <Input
+                id={`edu-${idx}-fieldOfStudy`}
                 value={edu.fieldOfStudy ?? ""}
                 onChange={(e) =>
                   updateEntry(idx, "fieldOfStudy", e.target.value)
@@ -170,32 +177,39 @@ export function EducationForm({ data, onChange, errors }: EducationFormProps) {
               />
             </FormField>
 
-            <FormField label="Location">
+            <FormField label="Location" htmlFor={`edu-${idx}-location`}>
               <Input
+                id={`edu-${idx}-location`}
                 value={edu.location ?? ""}
                 onChange={(e) => updateEntry(idx, "location", e.target.value)}
                 placeholder="Cambridge, MA"
               />
             </FormField>
 
-            <FormField label="Start Date" required>
+            <FormField label="Start Date" htmlFor={`edu-${idx}-startDate`} required error={errors?.[`${idx}.startDate`]}>
               <Input
+                id={`edu-${idx}-startDate`}
                 type="month"
                 value={toMonthInputValue(edu.startDate)}
                 onChange={(e) =>
                   updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))
                 }
+                aria-invalid={Boolean(errors?.[`${idx}.startDate`])}
+                aria-describedby={errors?.[`${idx}.startDate`] ? `edu-${idx}-startDate-error` : undefined}
               />
             </FormField>
 
-            <FormField label="End Date">
+            <FormField label="End Date" htmlFor={`edu-${idx}-endDate`} error={errors?.[`${idx}.endDate`]}>
               <Input
+                id={`edu-${idx}-endDate`}
                 type="month"
                 value={toMonthInputValue(edu.endDate)}
                 onChange={(e) =>
                   updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
                 disabled={edu.isCurrent}
+                aria-invalid={Boolean(errors?.[`${idx}.endDate`])}
+                aria-describedby={errors?.[`${idx}.endDate`] ? `edu-${idx}-endDate-error` : undefined}
               />
             </FormField>
 
@@ -215,8 +229,9 @@ export function EducationForm({ data, onChange, errors }: EducationFormProps) {
               </label>
             </div>
 
-            <FormField label="Grade / GPA" hint="Optional">
+            <FormField label="Grade / GPA" htmlFor={`edu-${idx}-grade`} hint="Optional">
               <Input
+                id={`edu-${idx}-grade`}
                 value={edu.grade ?? ""}
                 onChange={(e) => updateEntry(idx, "grade", e.target.value)}
                 placeholder="3.8 / 4.0"
@@ -224,8 +239,9 @@ export function EducationForm({ data, onChange, errors }: EducationFormProps) {
             </FormField>
 
             <div className="sm:col-span-2">
-              <FormField label="Description" hint="Optional">
+              <FormField label="Description" htmlFor={`edu-${idx}-description`} hint="Optional">
                 <Textarea
+                  id={`edu-${idx}-description`}
                   value={edu.description ?? ""}
                   onChange={(e) =>
                     updateEntry(idx, "description", e.target.value)

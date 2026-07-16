@@ -140,63 +140,80 @@ export function ProjectsForm({ data, onChange, errors }: ProjectsFormProps) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Project Name" required>
+            <FormField label="Project Name" htmlFor={`proj-${idx}-title`} required error={errors?.[`${idx}.title`]}>
               <Input
+                id={`proj-${idx}-title`}
                 value={proj.title}
                 onChange={(e) => updateEntry(idx, "title", e.target.value)}
                 placeholder="My Awesome Project"
+                aria-invalid={Boolean(errors?.[`${idx}.title`])}
+                aria-describedby={errors?.[`${idx}.title`] ? `proj-${idx}-title-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Role">
+            <FormField label="Role" htmlFor={`proj-${idx}-role`}>
               <Input
+                id={`proj-${idx}-role`}
                 value={proj.role ?? ""}
                 onChange={(e) => updateEntry(idx, "role", e.target.value)}
                 placeholder="Lead Developer"
               />
             </FormField>
 
-            <FormField label="Project URL">
+            <FormField label="Project URL" htmlFor={`proj-${idx}-url`} error={errors?.[`${idx}.url`]}>
               <Input
+                id={`proj-${idx}-url`}
                 type="url"
                 value={proj.url ?? ""}
                 onChange={(e) => updateEntry(idx, "url", e.target.value)}
                 placeholder="https://project.example.com"
+                aria-invalid={Boolean(errors?.[`${idx}.url`])}
+                aria-describedby={errors?.[`${idx}.url`] ? `proj-${idx}-url-error` : undefined}
               />
             </FormField>
 
-            <FormField label="GitHub URL">
+            <FormField label="GitHub URL" htmlFor={`proj-${idx}-gitUrl`} error={errors?.[`${idx}.gitUrl`]}>
               <Input
+                id={`proj-${idx}-gitUrl`}
                 type="url"
                 value={proj.gitUrl ?? ""}
                 onChange={(e) => updateEntry(idx, "gitUrl", e.target.value)}
                 placeholder="https://github.com/user/project"
+                aria-invalid={Boolean(errors?.[`${idx}.gitUrl`])}
+                aria-describedby={errors?.[`${idx}.gitUrl`] ? `proj-${idx}-gitUrl-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Start Date">
+            <FormField label="Start Date" htmlFor={`proj-${idx}-startDate`} error={errors?.[`${idx}.startDate`]}>
               <Input
+                id={`proj-${idx}-startDate`}
                 type="month"
                 value={toMonthInputValue(proj.startDate)}
                 onChange={(e) =>
                   updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))
                 }
+                aria-invalid={Boolean(errors?.[`${idx}.startDate`])}
+                aria-describedby={errors?.[`${idx}.startDate`] ? `proj-${idx}-startDate-error` : undefined}
               />
             </FormField>
 
-            <FormField label="End Date">
+            <FormField label="End Date" htmlFor={`proj-${idx}-endDate`} error={errors?.[`${idx}.endDate`]}>
               <Input
+                id={`proj-${idx}-endDate`}
                 type="month"
                 value={toMonthInputValue(proj.endDate)}
                 onChange={(e) =>
                   updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
+                aria-invalid={Boolean(errors?.[`${idx}.endDate`])}
+                aria-describedby={errors?.[`${idx}.endDate`] ? `proj-${idx}-endDate-error` : undefined}
               />
             </FormField>
 
             <div className="sm:col-span-2">
-              <FormField label="Description">
+              <FormField label="Description" htmlFor={`proj-${idx}-description`}>
                 <Textarea
+                  id={`proj-${idx}-description`}
                   value={proj.description ?? ""}
                   onChange={(e) =>
                     updateEntry(idx, "description", e.target.value)
@@ -210,9 +227,11 @@ export function ProjectsForm({ data, onChange, errors }: ProjectsFormProps) {
             <div className="sm:col-span-2">
               <FormField
                 label="Technologies"
+                htmlFor={`proj-${idx}-technologies`}
                 hint="Comma-separated"
               >
                 <Input
+                  id={`proj-${idx}-technologies`}
                   value={(proj.technologies ?? []).join(", ")}
                   onChange={(e) =>
                     updateEntry(

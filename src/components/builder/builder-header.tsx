@@ -49,6 +49,7 @@ export function BuilderHeader({
           <Link
             href="/dashboard"
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Back to dashboard"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Dashboard</span>
@@ -68,7 +69,14 @@ export function BuilderHeader({
         <div className="flex items-center gap-3">
           {/* Completion */}
           <div className="hidden items-center gap-2 sm:flex">
-            <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100">
+            <div
+              role="progressbar"
+              aria-valuenow={completionPercentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Resume completion: ${completionPercentage}%`}
+              className="h-2 w-24 overflow-hidden rounded-full bg-slate-100"
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-500"
                 style={{ width: `${completionPercentage}%` }}

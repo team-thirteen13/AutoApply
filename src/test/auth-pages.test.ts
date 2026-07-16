@@ -131,7 +131,7 @@ describe("register server action", () => {
     const result = await register({ success: false, message: "" }, formData);
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe("User already registered");
+    expect(result.message).toBe("An account with this email already exists. Try signing in instead.");
   });
 });
 
@@ -198,7 +198,7 @@ describe("login server action", () => {
     const result = await login({ success: false, message: "" }, formData);
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe("Invalid login credentials");
+    expect(result.message).toBe("Invalid email or password. Please check your credentials and try again.");
   });
 });
 

@@ -371,13 +371,13 @@ describe("Regressions", () => {
 });
 
 describe("Accessibility", () => {
-  it("panel has dialog role and aria-label but not aria-modal", async () => {
+  it("panel has dialog role and aria-labelledby and aria-modal", async () => {
     await renderAndWait([]);
     fireEvent.click(screen.getByTestId("history-btn"));
     await waitFor(() => {
       const dialog = screen.getByRole("dialog");
-      expect(dialog).toHaveAttribute("aria-label", "Version history");
-      expect(dialog).not.toHaveAttribute("aria-modal");
+      expect(dialog).toHaveAttribute("aria-labelledby");
+      expect(dialog).toHaveAttribute("aria-modal", "true");
     });
   });
 

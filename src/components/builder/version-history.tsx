@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useId,
   type RefObject,
 } from "react";
 import { X, Loader2, AlertCircle, History, RotateCcw } from "lucide-react";
@@ -17,6 +18,7 @@ import {
 } from "@/app/resumes/actions";
 import { normalizeSkills } from "@/lib/skills-normalize";
 import { normalizeSnapshotTemplate } from "@/lib/templates";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { VersionHistoryItem } from "./version-history-item";
 import type { ResumeVersion, ResumeSnapshot } from "@/types/resume";
 
@@ -85,6 +87,10 @@ export function VersionHistory({
   );
   const [isRestoring, setIsRestoring] = useState(false);
 
+  const titleId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const panelRef = useFocusTrap<HTMLDivElement>(open, historyButtonRef, { headingRef });
+
   // Fetch versions when panel opens
   const fetchVersions = useCallback(async () => {
     if (!open) return;
@@ -120,25 +126,13 @@ export function VersionHistory({
     void fetchVersions();
   }, [open, fetchVersions]);
 
-  // Focus the panel when it opens; return focus to History button when it closes
-  const panelRef = useRef<HTMLDivElement>(null);
+  // Listen for escape from focus trap
   useEffect(() => {
-    if (open && panelRef.current) {
-      panelRef.current.focus();
-    }
-    if (!open && historyButtonRef?.current) {
-      historyButtonRef.current.focus();
-    }
-  }, [open, historyButtonRef]);
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    if (!open || !panelRef.current) return;
+    const el = panelRef.current;
+    const handler = () => onClose();
+    el.addEventListener("focus-trap-escape", handler);
+    return () => el.removeEventListener("focus-trap-escape", handler);
   }, [open, onClose]);
 
   const handlePreview = useCallback((version: ResumeVersion) => {
@@ -208,7 +202,7 @@ export function VersionHistory({
       <div
         ref={panelRef}
         role="dialog"
-        aria-label="Version history"
+        aria-labelledby={titleId}
         tabIndex={-1}
         className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform sm:max-w-xl outline-none"
       >
@@ -217,7 +211,7 @@ export function VersionHistory({
           <div className="flex items-center gap-3">
             <History className="h-5 w-5 text-slate-500" />
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 id={titleId} ref={headingRef} className="text-lg font-semibold text-slate-900" tabIndex={-1}>
                 Version History
               </h2>
               {!isLoading && (
@@ -286,7 +280,7 @@ export function VersionHistory({
             /* List mode */
             <div className="p-6">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-16">
+                <div role="status" className="flex flex-col items-center justify-center py-16">
                   <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
                   <p className="mt-3 text-sm text-slate-400">
                     Loading versions...

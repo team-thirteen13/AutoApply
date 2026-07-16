@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { signUp } from "@/features/auth";
+import { getAuthErrorMessage } from "@/features/auth/auth-error-messages";
 
 export interface RegisterState {
   success: boolean;
@@ -35,7 +36,7 @@ export async function register(
   const result = await signUp({ email, password });
 
   if (!result.success) {
-    return { success: false, message: result.error.message };
+    return { success: false, message: getAuthErrorMessage(result.error.code) };
   }
 
   // If email is confirmed (autoconfirm ON), redirect to dashboard

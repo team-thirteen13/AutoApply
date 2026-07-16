@@ -148,16 +148,20 @@ export function CertificationsForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Certification Name" required>
+            <FormField label="Certification Name" htmlFor={`cert-${idx}-name`} required error={errors?.[`${idx}.name`]}>
               <Input
+                id={`cert-${idx}-name`}
                 value={cert.name}
                 onChange={(e) => updateEntry(idx, "name", e.target.value)}
                 placeholder="AWS Solutions Architect"
+                aria-invalid={Boolean(errors?.[`${idx}.name`])}
+                aria-describedby={errors?.[`${idx}.name`] ? `cert-${idx}-name-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Issuing Organisation">
+            <FormField label="Issuing Organisation" htmlFor={`cert-${idx}-org`}>
               <Input
+                id={`cert-${idx}-org`}
                 value={cert.issuingOrganisation ?? ""}
                 onChange={(e) =>
                   updateEntry(idx, "issuingOrganisation", e.target.value)
@@ -166,24 +170,30 @@ export function CertificationsForm({
               />
             </FormField>
 
-            <FormField label="Issue Date" required>
+            <FormField label="Issue Date" htmlFor={`cert-${idx}-startDate`} required error={errors?.[`${idx}.startDate`]}>
               <Input
+                id={`cert-${idx}-startDate`}
                 type="month"
                 value={toMonthInputValue(cert.startDate)}
                 onChange={(e) =>
                   updateEntry(idx, "startDate", fromMonthInputValue(e.target.value))
                 }
+                aria-invalid={Boolean(errors?.[`${idx}.startDate`])}
+                aria-describedby={errors?.[`${idx}.startDate`] ? `cert-${idx}-startDate-error` : undefined}
               />
             </FormField>
 
-            <FormField label="Expiry Date">
+            <FormField label="Expiry Date" htmlFor={`cert-${idx}-endDate`} error={errors?.[`${idx}.endDate`]}>
               <Input
+                id={`cert-${idx}-endDate`}
                 type="month"
                 value={toMonthInputValue(cert.endDate)}
                 onChange={(e) =>
                   updateEntry(idx, "endDate", fromMonthInputValue(e.target.value))
                 }
                 disabled={cert.doesNotExpire}
+                aria-invalid={Boolean(errors?.[`${idx}.endDate`])}
+                aria-describedby={errors?.[`${idx}.endDate`] ? `cert-${idx}-endDate-error` : undefined}
               />
             </FormField>
 
@@ -203,8 +213,9 @@ export function CertificationsForm({
               </label>
             </div>
 
-            <FormField label="Credential ID" hint="Optional">
+            <FormField label="Credential ID" htmlFor={`cert-${idx}-credentialId`} hint="Optional">
               <Input
+                id={`cert-${idx}-credentialId`}
                 value={cert.credentialId ?? ""}
                 onChange={(e) =>
                   updateEntry(idx, "credentialId", e.target.value)
@@ -213,8 +224,9 @@ export function CertificationsForm({
               />
             </FormField>
 
-            <FormField label="Credential URL" hint="Optional">
+            <FormField label="Credential URL" htmlFor={`cert-${idx}-url`} hint="Optional">
               <Input
+                id={`cert-${idx}-url`}
                 type="url"
                 value={cert.url ?? ""}
                 onChange={(e) => updateEntry(idx, "url", e.target.value)}
