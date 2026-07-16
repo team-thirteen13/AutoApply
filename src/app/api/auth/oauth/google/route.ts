@@ -13,5 +13,5 @@ export async function POST(request: Request) {
     return jsonParseErrorResponse();
   }
 
-  return authJsonResponse(await startGoogleOAuth(body));
+  return authJsonResponse(await startGoogleOAuth(body, request));
 }
