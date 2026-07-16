@@ -4,18 +4,16 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Wand2 } from "lucide-react";
 import { createResumeAction } from "@/app/resumes/actions";
-import { GenerateResumeFlow } from "@/components/ai/generate-resume-flow";
 
 // ─────────────────────────────────────────────────────────────
 // Create New Resume Page
 // ─────────────────────────────────────────────────────────────
 // Client component with structured form errors, pending state,
-// canonical action call, and AI generation option.
+// and canonical action call.
 
 export default function NewResumePage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [aiFlowOpen, setAiFlowOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [targetRole, setTargetRole] = useState("");
@@ -157,7 +155,7 @@ export default function NewResumePage() {
             </button>
           </form>
 
-          {/* AI generation option */}
+          {/* CV Optimization option */}
           <div className="mt-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -169,24 +167,22 @@ export default function NewResumePage() {
             </div>
             <button
               type="button"
-              onClick={() => setAiFlowOpen(true)}
-              disabled={isPending}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-6 py-3 text-sm font-medium text-violet-700 shadow-sm transition-all hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled
+              aria-describedby="new-resume-optimize-description"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-medium text-slate-400 cursor-not-allowed shadow-sm"
             >
               <Wand2 className="h-4 w-4" />
-              Generate with AI
+              Optimize CV with AI
+              <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                Coming soon
+              </span>
             </button>
+            <span id="new-resume-optimize-description" className="sr-only">
+              Upload an existing CV and improve it with AI. Coming soon.
+            </span>
           </div>
         </div>
       </div>
-
-      <GenerateResumeFlow
-        open={aiFlowOpen}
-        onClose={() => setAiFlowOpen(false)}
-        mode="new"
-        initialTargetRole={targetRole}
-        initialTitle={title}
-      />
     </div>
   );
 }

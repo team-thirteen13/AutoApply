@@ -75,28 +75,36 @@ export function LanguagesForm({ data, onChange, errors }: LanguagesFormProps) {
           {data.map((lang, idx) => (
             <div
               key={lang.id ?? idx}
-              className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm"
+              className="grid grid-cols-[1fr_44px] items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm md:grid-cols-[minmax(0,2fr)_minmax(150px,0.7fr)_44px]"
             >
+              <label htmlFor={`lang-name-${idx}`} className="sr-only">
+                Language name
+              </label>
               <Input
+                id={`lang-name-${idx}`}
                 value={lang.name}
                 onChange={(e) => updateLanguage(idx, "name", e.target.value)}
-                placeholder="Language"
+                placeholder="e.g. English"
                 aria-label="Language name"
-                className="flex-1"
+                className="col-span-2 w-full md:col-span-1"
               />
+              <label htmlFor={`lang-proficiency-${idx}`} className="sr-only">
+                Language proficiency level
+              </label>
               <Select
+                id={`lang-proficiency-${idx}`}
                 value={lang.proficiency ?? "professional"}
                 onChange={(e) =>
                   updateLanguage(idx, "proficiency", e.target.value)
                 }
                 options={proficiencyLevels}
                 aria-label="Language proficiency level"
-                className="w-40"
+                className="w-full"
               />
               <button
                 onClick={() => removeLanguage(idx)}
-                className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                aria-label={`Remove ${lang.name}`}
+                className="flex h-11 w-11 items-center justify-center rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                aria-label={`Remove ${lang.name || "language"}`}
               >
                 <X className="h-4 w-4" />
               </button>
