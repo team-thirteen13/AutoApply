@@ -36,6 +36,7 @@ vi.mock("lucide-react", () => ({
 // ── Import after mocks ─────────────────────────────────────
 
 import { FeatureCard } from "@/components/landing/feature-card";
+import { FeatureShowcase } from "@/components/landing/feature-showcase";
 import { FileText } from "lucide-react";
 
 // ── Tests ──────────────────────────────────────────────────
@@ -82,5 +83,47 @@ describe("FeatureCard", () => {
     // Find the icon container (the div with the icon inside)
     const iconContainer = container.querySelector(".bg-hero-start\\/10");
     expect(iconContainer).toBeInTheDocument();
+  });
+});
+
+describe("FeatureShowcase", () => {
+  it("renders all 6 feature cards", () => {
+    render(<FeatureShowcase />);
+    expect(screen.getByText("Resume Creation")).toBeInTheDocument();
+    expect(screen.getByText("Profile Management")).toBeInTheDocument();
+    expect(screen.getByText("Experience Tracking")).toBeInTheDocument();
+    expect(screen.getByText("Education")).toBeInTheDocument();
+    expect(screen.getByText("Project Listings")).toBeInTheDocument();
+    expect(screen.getByText("Skill Management")).toBeInTheDocument();
+  });
+
+  it("renders section heading and subtitle", () => {
+    render(<FeatureShowcase />);
+    expect(
+      screen.getByText("Everything you need to build the perfect resume")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "AutoApply gives you the tools to create, manage, and optimize your professional resume."
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("section has correct grid layout classes", () => {
+    const { container } = render(<FeatureShowcase />);
+    const grid = container.querySelector(".grid");
+    expect(grid).toBeInTheDocument();
+    expect(grid?.className).toContain("grid-cols-1");
+    expect(grid?.className).toContain("sm:grid-cols-2");
+    expect(grid?.className).toContain("lg:grid-cols-3");
+  });
+
+  it("section has gradient background", () => {
+    const { container } = render(<FeatureShowcase />);
+    const section = container.querySelector("section");
+    expect(section).toBeInTheDocument();
+    expect(section?.className).toContain("bg-gradient-to-b");
+    expect(section?.className).toContain("from-white");
+    expect(section?.className).toContain("to-slate-50");
   });
 });
