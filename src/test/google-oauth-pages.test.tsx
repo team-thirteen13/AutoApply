@@ -96,7 +96,7 @@ describe("Login page — Google OAuth integration", () => {
   it("renders the page heading", () => {
     render(<LoginPage />);
     expect(
-      screen.getByRole("heading", { name: "Sign In" }),
+      screen.getByRole("heading", { name: "Welcome back" }),
     ).toBeInTheDocument();
   });
 });
@@ -141,7 +141,7 @@ describe("Register page — Google OAuth integration", () => {
   it("renders the page heading", () => {
     render(<RegisterPage />);
     expect(
-      screen.getByRole("heading", { name: "Create Account" }),
+      screen.getByRole("heading", { name: "Create your account" }),
     ).toBeInTheDocument();
   });
 });
