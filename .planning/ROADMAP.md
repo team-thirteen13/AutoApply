@@ -58,13 +58,13 @@ Plans:
   4. At least one additional sign-up CTA appears below the content sections (repeated from hero)
   5. All content sections are responsive and maintain readability on mobile viewports
 
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Feature Showcase section with 2x3 grid and hero gradient fade
+- [ ] 02-02-PLAN.md — AI Workflow pipeline with 4 steps, arrows, and first CTA
+- [ ] 02-03-PLAN.md — Testimonials section with 3 cards and second CTA
 
 ### Phase 3: Footer & Polish
 
