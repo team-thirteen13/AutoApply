@@ -58,13 +58,20 @@ Plans:
   4. At least one additional sign-up CTA appears below the content sections (repeated from hero)
   5. All content sections are responsive and maintain readability on mobile viewports
 
-**Plans**: 3/3 plans complete
+**Plans**: 3/3 plans complete + 2 gap closure plans
 
 Plans:
 
 - [x] 02-01-PLAN.md — Feature Showcase section with 2x3 grid and hero gradient fade
 - [x] 02-02-PLAN.md — AI Workflow pipeline with 4 steps, arrows, and first CTA
 - [x] 02-03-PLAN.md — Testimonials section with 3 cards and second CTA
+
+**Gap Closure Plans** (from UAT diagnosis):
+
+Plans:
+
+- [ ] 02.1-01-PLAN.md — Section clip-path transitions, gradient color tokens, and custom SVG icons
+- [ ] 02.1-02-PLAN.md — AI Workflow card grid layout and Testimonials carousel redesign
 
 ### Phase 3: Footer & Polish
 
@@ -95,5 +102,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Hero | 3/3 | Complete    | 2026-07-16 |
-| 2. Content Sections | 3/3 | Complete    | 2026-07-16 |
+| 2. Content Sections | 3/3 + 2 gap | Gap closure | 2026-07-16 |
 | 3. Footer & Polish | 0/2 | Not started | - |
