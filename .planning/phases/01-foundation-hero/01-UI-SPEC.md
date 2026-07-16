@@ -50,7 +50,7 @@ Exceptions: None
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 16px (1rem) | 400 (regular) | 1.5 |
-| Label | 14px (0.875rem) | 500 (medium) | 1.4 |
+| Label | 14px (0.875rem) | 400 (regular) | 1.4 |
 | Heading | 28px (1.75rem) | 700 (bold) | 1.2 |
 | Display | 48px (3rem) | 700 (bold) | 1.1 |
 
@@ -103,6 +103,8 @@ Exceptions: None
 **Empty state:** Not applicable — landing page is static content, no data-dependent views.
 
 **Hero fade-in:** Opacity 0 to 1 over 600ms on page load. `prefers-reduced-motion: reduce` disables animation (instant render).
+
+**Primary focal point:** Hero headline text — drawn first by size (48px Display) and centered positioning against the gradient background. Visual hierarchy flows: headline → subheadline → CTA button.
 
 ---
 
