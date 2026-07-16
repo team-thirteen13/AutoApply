@@ -15,6 +15,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/font/google", () => ({
   Geist: vi.fn(() => ({ variable: "--font-geist-sans", subsets: [] })),
   Geist_Mono: vi.fn(() => ({ variable: "--font-geist-mono", subsets: [] })),
+  Space_Grotesk: vi.fn(() => ({
+    variable: "--font-space-grotesk",
+    subsets: [],
+  })),
+  Inter: vi.fn(() => ({ variable: "--font-inter", subsets: [] })),
 }));
 
 vi.mock("next/link", () => ({
