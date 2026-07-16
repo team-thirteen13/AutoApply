@@ -35,6 +35,7 @@ vi.mock("lucide-react", () => ({
 
 import { WorkflowStep } from "@/components/landing/workflow-step";
 import { CTASection } from "@/components/landing/cta-section";
+import { AIWorkflow } from "@/components/landing/ai-workflow";
 import { Search } from "lucide-react";
 
 // ── Tests ──────────────────────────────────────────────────
@@ -107,5 +108,47 @@ describe("CTASection", () => {
     expect(section).toBeInTheDocument();
     expect(section?.className).toContain("py-16");
     expect(section?.className).toContain("bg-white");
+  });
+});
+
+describe("AIWorkflow", () => {
+  it("renders all 4 pipeline steps", () => {
+    render(<AIWorkflow />);
+    expect(screen.getByText("Resume Analysis")).toBeInTheDocument();
+    expect(screen.getByText("Job Matching")).toBeInTheDocument();
+    expect(screen.getByText("Cover Letters")).toBeInTheDocument();
+    expect(screen.getByText("ATS Score")).toBeInTheDocument();
+  });
+
+  it("renders arrow connectors", () => {
+    const { container } = render(<AIWorkflow />);
+    const arrows = container.querySelectorAll(".contents > div");
+    // 4 steps + 3 right-arrows + 3 down-arrows = 10 content divs
+    expect(arrows.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("has correct section heading text", () => {
+    render(<AIWorkflow />);
+    expect(
+      screen.getByText("Your AI-powered job search")
+    ).toBeInTheDocument();
+  });
+
+  it("has gradient background classes", () => {
+    const { container } = render(<AIWorkflow />);
+    const section = container.querySelector("section");
+    expect(section).toBeInTheDocument();
+    expect(section?.className).toContain("bg-gradient-to-b");
+    expect(section?.className).toContain("from-slate-50");
+    expect(section?.className).toContain("to-white");
+  });
+
+  it("pipeline uses responsive flex layout", () => {
+    const { container } = render(<AIWorkflow />);
+    const pipeline = container.querySelector(
+      ".flex.flex-col.items-center"
+    );
+    expect(pipeline).toBeInTheDocument();
+    expect(pipeline?.className).toContain("md:flex-row");
   });
 });
