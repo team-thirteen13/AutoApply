@@ -22,7 +22,6 @@ import {
   ProjectsForm,
   CertificationsForm,
   LanguagesForm,
-  FileUploadForm,
 } from "./sections";
 import { ResumePreview } from "@/components/preview/resume-preview";
 import { VersionHistory } from "./version-history";
@@ -35,19 +34,18 @@ import {
 } from "@/lib/validation/builder";
 import { normalizeSkills } from "@/lib/skills-normalize";
 import { normalizeSnapshotTemplate, getEffectiveTemplateId } from "@/lib/templates";
+import { AlertCircle } from "lucide-react";
 
 interface ResumeBuilderProps {
   resumeId: string;
   initialTitle: string;
   initialSnapshot?: ResumeSnapshot;
-  initialFilePath?: string | null;
 }
 
 export function ResumeBuilder({
   resumeId,
   initialTitle,
   initialSnapshot,
-  initialFilePath,
 }: ResumeBuilderProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
@@ -65,9 +63,11 @@ export function ResumeBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [saveBlocked, setSaveBlocked] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
+    duration?: number;
   } | null>(null);
   const [sectionErrors, setSectionErrors] = useState<
     Record<BuilderSectionId, Record<string, string>>
@@ -95,6 +95,7 @@ export function ResumeBuilder({
   // Mark dirty on changes
   const markDirty = useCallback(() => {
     setIsDirty(true);
+    setSaveBlocked(false);
   }, []);
 
   // Unsaved changes warning
@@ -337,6 +338,7 @@ export function ResumeBuilder({
     );
 
     if (hasErrors) {
+      setSaveBlocked(true);
       // Find first invalid section and navigate to it
       const firstInvalid = findFirstInvalidSection({
         profile: snapshot.profile,
@@ -354,11 +356,14 @@ export function ResumeBuilder({
       }
 
       setToast({
-        message: "Please fix validation errors before saving",
+        message: "Please fix the highlighted fields before saving",
         type: "error",
+        duration: 10000,
       });
       return;
     }
+
+    setSaveBlocked(false);
 
     setIsSaving(true);
     try {
@@ -430,6 +435,22 @@ export function ResumeBuilder({
             onSectionClick={scrollToSection}
             completedSections={completedSections}
           />
+
+          {saveBlocked && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4" role="alert">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">
+                    Cannot save — please fix the highlighted fields
+                  </p>
+                  <p className="mt-1 text-sm text-red-600">
+                    Scroll to the sections with errors below, correct them, then try saving again.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-8">
             {/* Template Selection */}
@@ -544,12 +565,6 @@ export function ResumeBuilder({
               />
             </div>
 
-            {/* File Upload */}
-            <FileUploadForm
-              resumeId={resumeId}
-              existingFile={initialFilePath ? { filePath: initialFilePath } : null}
-            />
-
             {/* Preview section */}
             <div
               ref={(el) => {
@@ -607,6 +622,7 @@ export function ResumeBuilder({
         <Toast
           message={toast.message}
           type={toast.type}
+          duration={toast.duration}
           onClose={() => setToast(null)}
         />
       )}

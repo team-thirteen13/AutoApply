@@ -63,10 +63,6 @@ vi.mock("@/components/ui/confirm-dialog", () => ({
     ) : null,
 }));
 
-vi.mock("@/components/dashboard/file-management", () => ({
-  FileManagement: () => <div data-testid="file-management" />,
-}));
-
 // ── Import after mocks ─────────────────────────────────────
 
 import { ResumeCard } from "@/components/dashboard/resume-card";

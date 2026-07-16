@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FilePlus2, Sparkles } from "lucide-react";
+import { FilePlus2, Sparkles, Wand2 } from "lucide-react";
 
 export function EmptyResumeState() {
   return (
@@ -22,12 +22,20 @@ export function EmptyResumeState() {
           <Sparkles className="h-4 w-4" />
           Create Resume
         </Link>
-        <Link
-          href="/resumes/new"
-          className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-6 py-3 text-sm font-medium text-violet-700 shadow-sm transition-all hover:bg-violet-50"
+        <button
+          disabled
+          aria-describedby="empty-optimize-description"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-medium text-slate-400 cursor-not-allowed shadow-sm"
         >
-          Generate with AI
-        </Link>
+          <Wand2 className="h-4 w-4" />
+          Optimize CV with AI
+          <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+            Coming soon
+          </span>
+        </button>
+        <span id="empty-optimize-description" className="sr-only">
+          Upload an existing CV and improve it with AI. Coming soon.
+        </span>
       </div>
     </div>
   );
