@@ -27,6 +27,7 @@ vi.mock("next/link", () => ({
 // ── Import after mocks ─────────────────────────────────────
 
 import { TestimonialCard } from "@/components/landing/testimonial-card";
+import { Testimonials } from "@/components/landing/testimonials";
 
 // ── Tests ──────────────────────────────────────────────────
 
@@ -80,5 +81,37 @@ describe("TestimonialCard", () => {
     expect(card.className).toContain("bg-white");
     expect(card.className).toContain("p-6");
     expect(card.className).toContain("shadow-sm");
+  });
+});
+
+describe("Testimonials", () => {
+  it("renders all 3 testimonial cards", () => {
+    render(<Testimonials />);
+    expect(screen.getByText("Sarah Chen")).toBeInTheDocument();
+    expect(screen.getByText("Marcus Johnson")).toBeInTheDocument();
+    expect(screen.getByText("Priya Patel")).toBeInTheDocument();
+  });
+
+  it("renders section heading text", () => {
+    render(<Testimonials />);
+    expect(screen.getByText("Loved by job seekers")).toBeInTheDocument();
+  });
+
+  it("has gradient background classes", () => {
+    const { container } = render(<Testimonials />);
+    const section = container.querySelector("section");
+    expect(section).toBeInTheDocument();
+    expect(section?.className).toContain("bg-gradient-to-b");
+    expect(section?.className).toContain("from-white");
+    expect(section?.className).toContain("to-slate-50");
+  });
+
+  it("grid uses responsive layout classes", () => {
+    const { container } = render(<Testimonials />);
+    const grid = container.querySelector(".grid");
+    expect(grid).toBeInTheDocument();
+    expect(grid?.className).toContain("grid-cols-1");
+    expect(grid?.className).toContain("md:grid-cols-2");
+    expect(grid?.className).toContain("lg:grid-cols-3");
   });
 });
