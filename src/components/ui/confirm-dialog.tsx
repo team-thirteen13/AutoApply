@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useId } from "react";
 import { Button } from "./button";
 
 interface ConfirmDialogProps {
@@ -25,6 +25,8 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -42,10 +44,12 @@ export function ConfirmDialog({
       ref={dialogRef}
       className="rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
       onCancel={onCancel}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
     >
       <div className="p-6">
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="mt-2 text-sm text-slate-500">{description}</p>
+        <h2 id={titleId} className="text-lg font-semibold text-slate-900">{title}</h2>
+        <p id={descriptionId} className="mt-2 text-sm text-slate-500">{description}</p>
       </div>
       <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
         <Button variant="ghost" onClick={onCancel}>

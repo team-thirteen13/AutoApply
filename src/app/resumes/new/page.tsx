@@ -177,10 +177,6 @@ export default function NewResumePage() {
               Generate with AI
             </button>
           </div>
-
-          <p className="mt-4 text-center text-xs text-slate-400">
-            ⚠ Temporary integration UI — not the final design
-          </p>
         </div>
       </div>
 

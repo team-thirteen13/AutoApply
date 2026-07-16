@@ -41,10 +41,6 @@ export default async function Home() {
             </>
           )}
         </div>
-
-        <p className="max-w-sm text-xs text-zinc-400 dark:text-zinc-500">
-          ⚠ Temporary integration-testing interface — not the final UI.
-        </p>
       </main>
     </div>
   );

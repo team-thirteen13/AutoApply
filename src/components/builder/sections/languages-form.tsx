@@ -81,6 +81,7 @@ export function LanguagesForm({ data, onChange, errors }: LanguagesFormProps) {
                 value={lang.name}
                 onChange={(e) => updateLanguage(idx, "name", e.target.value)}
                 placeholder="Language"
+                aria-label="Language name"
                 className="flex-1"
               />
               <Select
@@ -89,6 +90,7 @@ export function LanguagesForm({ data, onChange, errors }: LanguagesFormProps) {
                   updateLanguage(idx, "proficiency", e.target.value)
                 }
                 options={proficiencyLevels}
+                aria-label="Language proficiency level"
                 className="w-40"
               />
               <button

@@ -51,6 +51,7 @@ export function Toast({
 
   return (
     <div
+      role={type === "error" ? "alert" : "status"}
       className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all duration-300 ${
         bgColors[type]
       } ${visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}

@@ -58,7 +58,7 @@ export default function LoginPage() {
           </div>
 
           {state.message && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
               {state.message}
             </div>
           )}

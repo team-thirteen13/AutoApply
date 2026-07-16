@@ -79,6 +79,7 @@ export default function RegisterPage() {
 
           {state.message && (
             <div
+              role="alert"
               className={`rounded-md px-3 py-2 text-sm ${
                 state.success
                   ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"

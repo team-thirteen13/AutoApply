@@ -50,7 +50,7 @@ export default function PreviewPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
+      <div role="status" className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
           <p className="text-sm text-slate-500">Loading resume...</p>
@@ -106,12 +106,12 @@ export default function PreviewPage() {
             </button>
             <button
               disabled
-              title="PDF export coming soon"
+              aria-label="PDF export coming soon"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed"
             >
               <Download className="h-4 w-4" />
               PDF
-              <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
+              <span aria-hidden="true" className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
                 Soon
               </span>
             </button>
@@ -123,10 +123,6 @@ export default function PreviewPage() {
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 print:px-0 print:py-0">
         <ResumePreview snapshot={snapshot ?? {}} />
       </main>
-
-      <p className="pb-8 text-center text-xs text-slate-400 print:hidden">
-        ⚠ Temporary integration UI — Preview
-      </p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { GenerateResumeForm } from "./generate-resume-form";
@@ -15,6 +15,7 @@ import type { ResumeSnapshot } from "@/types/resume";
 import { normalizeSnapshotSkills } from "@/lib/skills-normalize";
 import { normalizeSnapshotTemplate } from "@/lib/templates";
 import { normalizeSnapshotDates } from "@/lib/date-normalize";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 // ─────────────────────────────────────────────────────────────
 // AI Generation Flow
@@ -54,7 +55,8 @@ export function GenerateResumeFlow({
   triggerRef,
 }: GenerateResumeFlowProps) {
   const router = useRouter();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const [step, setStep] = useState<FlowStep>("form");
   const [formInput, setFormInput] = useState<GenerateResumeInput | null>(null);
@@ -63,25 +65,21 @@ export function GenerateResumeFlow({
   const [applying, setApplying] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Focus management
-  useEffect(() => {
-    if (open && panelRef.current) {
-      panelRef.current.focus();
-    }
-    if (!open && triggerRef?.current) {
-      triggerRef.current.focus();
-    }
-  }, [open, triggerRef]);
+  const panelRef = useFocusTrap<HTMLDivElement>(open, triggerRef, {
+    ignoreEscape: confirmOpen || applying,
+    headingRef,
+  });
 
-  // Escape key handler
+  // Listen for escape from focus trap
   useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    if (!open || !panelRef.current) return;
+    const el = panelRef.current;
+    const handler = () => {
+      if (!confirmOpen && !applying) onClose();
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+    el.addEventListener("focus-trap-escape", handler);
+    return () => el.removeEventListener("focus-trap-escape", handler);
+  }, [open, onClose, confirmOpen, applying]);
 
   // Reset state when panel closes
   useEffect(() => {
@@ -221,7 +219,7 @@ export function GenerateResumeFlow({
       <div
         ref={panelRef}
         role="dialog"
-        aria-label="AI resume generation"
+        aria-labelledby={titleId}
         tabIndex={-1}
         className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform sm:max-w-xl outline-none"
       >
@@ -229,7 +227,7 @@ export function GenerateResumeFlow({
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-violet-600" />
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 id={titleId} ref={headingRef} className="text-lg font-semibold text-slate-900" tabIndex={-1}>
               {step === "preview" ? "Review Generated Resume" : "Generate Resume with AI"}
             </h2>
           </div>
@@ -296,7 +294,7 @@ export function GenerateResumeFlow({
 
         {/* Applying overlay */}
         {applying && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
+          <div role="status" className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
             <div className="flex flex-col items-center">
               <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
               <p className="mt-3 text-sm text-slate-600">Creating resume...</p>

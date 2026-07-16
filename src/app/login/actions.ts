@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { signIn } from "@/features/auth";
+import { getAuthErrorMessage } from "@/features/auth/auth-error-messages";
 
 export interface LoginState {
   success: boolean;
@@ -22,7 +23,7 @@ export async function login(
   const result = await signIn({ email, password });
 
   if (!result.success) {
-    return { success: false, message: result.error.message };
+    return { success: false, message: getAuthErrorMessage(result.error.code) };
   }
 
   redirect("/dashboard");

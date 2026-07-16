@@ -110,6 +110,7 @@ export function SkillsForm({ data, onChange, errors }: SkillsFormProps) {
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
             placeholder="Skill name"
+            aria-label="Skill name"
             className="sm:col-span-2"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -123,6 +124,7 @@ export function SkillsForm({ data, onChange, errors }: SkillsFormProps) {
             onChange={(e) => setNewCategory(e.target.value)}
             options={categories}
             placeholder="Category"
+            aria-label="Skill category"
           />
           <div className="flex gap-2">
             <Select
@@ -130,12 +132,14 @@ export function SkillsForm({ data, onChange, errors }: SkillsFormProps) {
               onChange={(e) => setNewProficiency(e.target.value)}
               options={proficiencyLevels}
               placeholder="Level"
+              aria-label="Skill proficiency level"
               className="flex-1"
             />
             <Button
               size="sm"
               onClick={handleAddNew}
               disabled={!newSkill.trim()}
+              aria-label="Add skill"
             >
               <Plus className="h-4 w-4" />
             </Button>

@@ -144,7 +144,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
 
       {/* Delete error toast */}
       {deleteError && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
+        <div role="alert" className="fixed bottom-6 right-6 z-50 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shadow-lg">
           <p className="text-sm font-medium text-red-700">{deleteError}</p>
           <button
             onClick={() => setDeleteError(null)}

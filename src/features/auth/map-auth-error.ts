@@ -9,6 +9,7 @@ import type { AuthErrorCode } from "@/types/auth";
 
 const CODE_MAP: Record<string, AuthErrorCode> = {
   invalid_credentials: "invalid_credentials",
+  invalid_grant: "invalid_credentials",
   email_not_confirmed: "email_not_confirmed",
   email_exists: "email_exists",
   user_already_exists: "email_exists",
