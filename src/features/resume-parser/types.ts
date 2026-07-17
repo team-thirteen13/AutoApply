@@ -15,7 +15,9 @@ export type ResumeParserErrorCode =
   | "scanned_pdf"
   | "malformed_document"
   | "empty_document"
-  | "extraction_failed";
+  | "extraction_failed"
+  | "file_too_large"
+  | "authentication_required";
 
 export interface ResumeParserError {
   code: ResumeParserErrorCode;

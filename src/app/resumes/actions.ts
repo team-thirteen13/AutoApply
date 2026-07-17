@@ -409,6 +409,8 @@ import { parseResume } from "@/features/resume-parser";
 import type {
   ResumeParserErrorCode,
 } from "@/features/resume-parser";
+import { requireAuthenticatedUser } from "@/lib/supabase/session";
+import { AuthenticationRequiredError } from "@/types/auth";
 
 export type ParseResumeResult =
   | { success: true; data: { snapshot: ResumeSnapshot; warnings: string[] } }
@@ -417,11 +419,15 @@ export type ParseResumeResult =
 /**
  * Parse an uploaded resume file and return a normalized snapshot.
  * Does NOT save to database — returns the parsed result for review.
+ * Requires an authenticated user.
  */
 export async function parseResumeFileAction(
   file: File,
 ): Promise<ParseResumeResult> {
   try {
+    // Require authentication before any processing
+    await requireAuthenticatedUser();
+
     // Validate file type
     const allowedTypes = [
       "application/pdf",
@@ -441,8 +447,8 @@ export async function parseResumeFileAction(
     if (file.size > maxSize) {
       return {
         success: false,
-        error: "File exceeds maximum size of 10MB.",
-        code: "unsupported_file_type",
+        error: "File exceeds the maximum size of 10 MB.",
+        code: "file_too_large",
       };
     }
 
@@ -476,7 +482,14 @@ export async function parseResumeFileAction(
         warnings: result.warnings ?? [],
       },
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthenticationRequiredError) {
+      return {
+        success: false,
+        error: "You must be signed in to parse a resume.",
+        code: "authentication_required",
+      };
+    }
     return {
       success: false,
       error: "An unexpected error occurred while parsing the file.",
