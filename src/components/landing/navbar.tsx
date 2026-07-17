@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ interface NavbarProps {
 export function Navbar({ user }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   const handleScroll = useCallback(() => {
     setIsScrolled(window.scrollY > 10);
@@ -107,6 +108,7 @@ export function Navbar({ user }: NavbarProps) {
 
           {/* Mobile hamburger */}
           <button
+            ref={menuTriggerRef}
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
             className={`inline-flex items-center justify-center rounded-lg p-2 transition-colors md:hidden ${
@@ -115,6 +117,8 @@ export function Navbar({ user }: NavbarProps) {
                 : "text-white hover:bg-white/10"
             }`}
             aria-label="Open navigation menu"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-navigation"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -126,6 +130,7 @@ export function Navbar({ user }: NavbarProps) {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         user={user}
+        triggerRef={menuTriggerRef}
       />
     </>
   );
