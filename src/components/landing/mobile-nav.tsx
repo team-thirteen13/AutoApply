@@ -7,18 +7,39 @@
 
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { AuthUser } from "@/types/auth";
 
 interface MobileNavProps {
   isOpen: boolean;
   onClose: () => void;
   user: AuthUser | null;
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
+export function MobileNav({ isOpen, onClose, user, triggerRef }: MobileNavProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const containerRef = useFocusTrap(isOpen, triggerRef, { headingRef });
+
+  // Listen for escape custom event from useFocusTrap
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = () => {
+      onClose();
+    };
+
+    const el = containerRef.current;
+    if (el) {
+      el.addEventListener("focus-trap-escape", handleEscape);
+      return () => el.removeEventListener("focus-trap-escape", handleEscape);
+    }
+  }, [isOpen, onClose, containerRef]);
+
   return (
     <div
       className={`fixed inset-0 z-50 md:hidden ${
@@ -36,15 +57,21 @@ export function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
 
       {/* Menu panel */}
       <div
+        ref={containerRef as React.RefObject<HTMLDivElement>}
+        id="mobile-navigation"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+        tabIndex={-1}
         className={`absolute right-0 top-0 flex h-full w-80 max-w-[85vw] flex-col bg-white shadow-xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Header with close button */}
         <div className="flex h-16 items-center justify-between border-b border-slate-100 px-4">
-          <span className="font-heading text-lg font-bold text-slate-900">
+          <h2 ref={headingRef} tabIndex={-1} className="font-heading text-lg font-bold text-slate-900 outline-none">
             AutoApply
-          </span>
+          </h2>
           <button
             type="button"
             onClick={onClose}
