@@ -87,12 +87,16 @@ Plans:
   4. Lighthouse performance score is above 90, LCP is under 2.5 seconds, and CLS is under 0.1
   5. Animations respect `prefers-reduced-motion` and no layout shifts occur during page load
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
+**Wave 1**
 
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Footer component with 4-column layout, gradient transition, and tests
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Accessibility (skip link, focus trap, ARIA) and performance (lazy loading, motion-safe) polish
 
 ## Progress
 
