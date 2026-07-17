@@ -2,7 +2,7 @@
 // Footer
 // ─────────────────────────────────────────────────────────────
 // Landing page footer with 4-column link layout, dynamic
-// copyright year, and a gradient transition from content.
+// copyright year, and dark background.
 // ─────────────────────────────────────────────────────────────
 
 import Link from "next/link";
@@ -38,9 +38,6 @@ export function Footer() {
 
   return (
     <>
-      {/* Gradient transition from content to footer */}
-      <div className="bg-gradient-to-b from-transparent to-gray-900 h-24" />
-
       <footer
         role="contentinfo"
         className="bg-gray-900 text-gray-300 py-12"

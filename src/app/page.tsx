@@ -22,6 +22,7 @@ export default async function Home() {
         <CTASection
           headline="Ready to build your resume?"
           subtext="Join thousands of job seekers who trust AutoApply."
+          gradient="from-blue-900/80 to-slate-800/90"
         />
         <LazySection>
           <Testimonials />
@@ -30,6 +31,7 @@ export default async function Home() {
           <CTASection
             headline="Start building your future today"
             subtext="Create your free account and build a resume that gets results."
+            gradient="from-purple-900/80 to-indigo-800/80"
           />
         </LazySection>
       </LandingLayout>

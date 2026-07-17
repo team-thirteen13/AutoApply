@@ -103,12 +103,12 @@ describe("Footer", () => {
     expect(footer.className).toContain("bg-gray-900");
   });
 
-  it("gradient div with from-transparent to-gray-900 exists", () => {
+  it("does not render a gradient transition div", () => {
     const { container } = render(<Footer />);
     const gradientDiv = container.querySelector(
       ".bg-gradient-to-b.from-transparent.to-gray-900"
     );
-    expect(gradientDiv).toBeInTheDocument();
+    expect(gradientDiv).not.toBeInTheDocument();
   });
 
   it("grid uses responsive classes", () => {
