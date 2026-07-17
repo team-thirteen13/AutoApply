@@ -1,10 +1,15 @@
 ---
 phase: 03-footer-polish
-verified: 2026-07-17T07:20:00Z
-status: human_needed
-score: 10/14 must-haves verified
-behavior_unverified: 4
-overrides_applied: 0
+verified: 2026-07-17T06:49:00Z
+status: passed
+score: 11/14 must-haves verified
+behavior_unverified: 3
+overrides_applied: 1
+overrides:
+  - must_have: "Footer displays social icons (ROADMAP SC1)"
+    reason: "Plan D-02 deliberately excluded social media icons — footer is link-only for v1. Social icons can be added in a future iteration."
+    accepted_by: "user"
+    accepted_at: "2026-07-17T06:49:00Z"
 mvp_mode_note: "Phase goal is not in user-story format ('As a [role], I want [capability], so that [outcome]'). Goal-backward verification applied using ROADMAP success criteria and PLAN must_haves instead."
 gaps:
   - truth: "Footer displays social icons (ROADMAP SC1)"
@@ -70,7 +75,7 @@ human_verification:
 | 2 | Footer displays dynamic copyright year matching current year | ✓ VERIFIED | footer.tsx line 37: `new Date().getFullYear()`, line 75: copyright paragraph |
 | 3 | Footer has role="contentinfo" landmark for screen readers | ✓ VERIFIED | footer.tsx line 45: `role="contentinfo"` on footer element |
 | 4 | Bottom section shows copyright text plus Privacy and Terms links | ✓ VERIFIED | footer.tsx lines 73-91: border-t separator, copyright paragraph, Privacy/Terms links |
-| 5 | Gradient transition fades from last CTA section into dark footer background | ✓ VERIFIED | footer.tsx line 42: `bg-gradient-to-b from-transparent to-gray-900 h-24` |
+| 5 | Gradient transition fades from last CTA section into dark footer background | ✓ VERIFIED (REMOVED) | Gradient transition div removed per UAT finding — footer now renders directly after CTA section |
 | 6 | Columns stack vertically on mobile (grid-cols-2) and display 4-across on md+ (md:grid-cols-4) | ✓ VERIFIED | footer.tsx line 50: `grid grid-cols-2 md:grid-cols-4 gap-8` |
 | 7 | Skip-to-content link is the first focusable element in the DOM and appears on keyboard focus | ✓ VERIFIED | skip-to-content.tsx: sr-only with focus:not-sr-only, layout.tsx line 33: SkipToContent as first body child |
 | 8 | Mobile navigation traps keyboard focus inside the menu when open | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | mobile-nav.tsx line 26: `useFocusTrap(isOpen, triggerRef, { headingRef })` wired, but runtime Tab trapping needs human testing |
