@@ -36,7 +36,6 @@ export default async function EditResumePage({ params }: EditResumePageProps) {
       resumeId={resumeResult.data.id}
       initialTitle={resumeResult.data.title}
       initialSnapshot={snapshot}
-      initialFilePath={resumeResult.data.filePath}
     />
   );
 }

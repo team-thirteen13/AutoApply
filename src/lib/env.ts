@@ -25,6 +25,10 @@ const serverEnvSchema = z.object({
     .string()
     .url("APP_URL must be a valid URL")
     .default("http://localhost:3000"),
+
+  // OAuth — comma-separated list of allowed origins for redirect validation
+  // e.g. "http://localhost:3000,https://auto-apply-pied.vercel.app"
+  ALLOWED_ORIGINS: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
