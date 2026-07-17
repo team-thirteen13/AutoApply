@@ -8,6 +8,21 @@ A bold, energetic landing page for AutoApply — an AI-powered job application p
 
 Communicate the full AutoApply vision — a working resume builder today, an intelligent job application platform tomorrow — and convert visitors to sign up.
 
+## Current State
+
+**Shipped:** v1.0 MVP (2026-07-17)
+**Phases:** 3 phases, 11 plans completed
+**Lines of Code:** ~33,000 TypeScript/React
+
+### What Was Built
+
+- Bold visual identity with Space Grotesk headings, Inter body, and Stripe/Notion-inspired color palette
+- Hero section with clear value proposition and sign-up CTA that converts visitors
+- Feature showcase with 6 gradient cards displaying current resume builder capabilities
+- AI workflow preview showing upcoming pipeline (resume analysis, job matching, cover letters, ATS scoring)
+- Testimonials section with 6 cards in horizontal scroll carousel
+- Production-ready footer with 4-column layout, accessibility polish, and responsive design across all viewports
+
 ## Requirements
 
 ### Validated
@@ -20,17 +35,18 @@ Communicate the full AutoApply vision — a working resume builder today, an int
 - ✓ Dashboard with resume listing — existing
 - ✓ Route protection via proxy middleware — existing
 - ✓ Supabase RLS authorization — existing
+- ✓ Landing page with hero section and sign-up CTA — v1.0
+- ✓ Feature showcase section (current resume builder features) — v1.0
+- ✓ AI workflow preview section (upcoming features walkthrough) — v1.0
+- ✓ Testimonials / social proof section — v1.0
+- ✓ Bold, energetic visual style (Stripe/Notion-inspired) — v1.0
+- ✓ Mobile-first responsive design — v1.0
+- ✓ Navigation with sign-up / sign-in links — v1.0
+- ✓ Footer with relevant links — v1.0
 
 ### Active
 
-- [ ] Landing page with hero section and sign-up CTA
-- [ ] Feature showcase section (current resume builder features)
-- [ ] AI workflow preview section (upcoming features walkthrough)
-- [ ] Testimonials / social proof section
-- [ ] Bold, energetic visual style (Stripe/Notion-inspired)
-- [ ] Mobile-first responsive design
-- [ ] Navigation with sign-up / sign-in links
-- [ ] Footer with relevant links
+(None — next milestone not yet defined)
 
 ### Out of Scope
 
@@ -43,10 +59,9 @@ Communicate the full AutoApply vision — a working resume builder today, an int
 ## Context
 
 - **Codebase**: Existing Next.js 16 + React 19 + TypeScript 5 + Tailwind CSS 4 + Supabase project
-- **Current state**: Resume builder is functional — auth, profiles, resume CRUD, experience/education/projects all working
-- **Team**: 3-member team with strict ownership boundaries (landing page is UI/frontend — Member 2's domain, but this is being built as a feature branch)
+- **Current state**: Landing page v1.0 shipped — hero, features, AI workflow, testimonials, footer all complete
+- **Team**: 3-member team with strict ownership boundaries (landing page is UI/frontend — Member 2's domain)
 - **Future vision**: Full AI-powered job application pipeline — resume analysis, job matching, cover letter generation, ATS scoring, skills gap analysis, interview prep, career coach, job tracking
-- **Existing home page**: `src/app/page.tsx` — needs to be replaced/enhanced with the new landing page
 
 ## Constraints
 
@@ -59,12 +74,13 @@ Communicate the full AutoApply vision — a working resume builder today, an int
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Bold & energetic style | User preference — like Stripe/Notion | — Pending |
+| Bold & energetic style | User preference — like Stripe/Notion | ✓ Validated |
 | No waitlist feature | User decision to remove email capture | ✓ Confirmed |
-| Mobile-first responsive | User requirement for cross-device experience | — Pending |
+| Mobile-first responsive | User requirement for cross-device experience | ✓ Validated |
 | Full product pitch (not Coming Soon) | Show current product + preview upcoming AI features | ✓ Confirmed |
 | Sign-up as primary CTA | Convert visitors to users of current resume builder | ✓ Confirmed |
+| Removed gradient transition div | UAT finding superseded original design decision D-07 | ✓ Resolved |
 
 ---
 
-*Last updated: 2026-07-16 after initialization*
+*Last updated: 2026-07-17 after v1.0 milestone*
