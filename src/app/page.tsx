@@ -7,6 +7,7 @@ import { CTASection } from "@/components/landing/cta-section";
 import { Testimonials } from "@/components/landing/testimonials";
 import { Footer } from "@/components/landing/footer";
 import LandingLayout from "@/components/landing/landing-layout";
+import { LazySection } from "@/components/landing/lazy-section";
 
 export default async function Home() {
   const user = await getAuthenticatedUser();
@@ -22,11 +23,15 @@ export default async function Home() {
           headline="Ready to build your resume?"
           subtext="Join thousands of job seekers who trust AutoApply."
         />
-        <Testimonials />
-        <CTASection
-          headline="Start building your future today"
-          subtext="Create your free account and build a resume that gets results."
-        />
+        <LazySection>
+          <Testimonials />
+        </LazySection>
+        <LazySection>
+          <CTASection
+            headline="Start building your future today"
+            subtext="Create your free account and build a resume that gets results."
+          />
+        </LazySection>
       </LandingLayout>
       <Footer />
     </>
