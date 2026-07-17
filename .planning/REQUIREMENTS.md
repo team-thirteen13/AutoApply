@@ -59,6 +59,6 @@ A 4-column footer layout with sections: Product links, Resources links, Company 
 | LP-03 | Phase 2 | Complete |
 | LP-04 | Phase 2 | Complete |
 | LP-05 | Phase 1 | Complete |
-| LP-06 | Phase 3 | Pending |
+| LP-06 | Phase 3 | Complete |
 | LP-07 | Phase 1 | Complete |
-| LP-08 | Phase 3 | Pending |
+| LP-08 | Phase 3 | Complete |
