@@ -5,9 +5,9 @@ milestone_name: MVP
 current_phase: 0
 status: shipped
 stopped_at: Milestone v1.0 complete
-last_updated: "2026-07-17T10:50:00.000Z"
+last_updated: "2026-07-17T11:00:00.000Z"
 last_activity: 2026-07-17
-last_activity_desc: Milestone v1.0 shipped
+last_activity_desc: Milestone v1.0 shipped — PR #125
 progress:
   total_phases: 3
   completed_phases: 3
