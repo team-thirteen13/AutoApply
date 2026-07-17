@@ -47,37 +47,38 @@ afterEach(() => {
 
 describe("WorkflowStep", () => {
   const defaultProps = {
-    number: 1,
     icon: Search,
+    number: "01",
     label: "Resume Analysis",
+    description: "AI scans your resume for strengths and gaps.",
   };
 
-  it("renders the step number and label", () => {
+  it("renders the number, label, and description", () => {
     render(<WorkflowStep {...defaultProps} />);
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("01")).toBeInTheDocument();
     expect(screen.getByText("Resume Analysis")).toBeInTheDocument();
+    expect(screen.getByText("AI scans your resume for strengths and gaps.")).toBeInTheDocument();
   });
 
-  it("applies numbered circle with bg-accent and white text", () => {
-    const { container } = render(<WorkflowStep {...defaultProps} />);
-    const circle = container.querySelector(".rounded-full");
-    expect(circle).toBeInTheDocument();
-    expect(circle?.className).toContain("bg-accent");
-    expect(circle?.className).toContain("text-white");
-  });
-
-  it("renders the icon below the numbered circle", () => {
+  it("renders the icon", () => {
     render(<WorkflowStep {...defaultProps} />);
     expect(screen.getByTestId("search-icon")).toBeInTheDocument();
   });
 
-  it("applies correct layout classes", () => {
+  it("applies dark gradient card classes", () => {
     const { container } = render(<WorkflowStep {...defaultProps} />);
-    const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.className).toContain("flex");
-    expect(wrapper.className).toContain("flex-col");
-    expect(wrapper.className).toContain("items-center");
-    expect(wrapper.className).toContain("text-center");
+    const card = container.firstChild as HTMLElement;
+    expect(card.className).toContain("rounded-2xl");
+    expect(card.className).toContain("bg-gradient-to-br");
+    expect(card.className).toContain("p-6");
+  });
+
+  it("renders without description when not provided", () => {
+    const { container } = render(
+      <WorkflowStep icon={Search} number="01" label="Test" />
+    );
+    const card = container.firstChild as HTMLElement;
+    expect(card.textContent).toContain("Test");
   });
 });
 
@@ -107,12 +108,12 @@ describe("CTASection", () => {
     const section = container.querySelector("section");
     expect(section).toBeInTheDocument();
     expect(section?.className).toContain("py-16");
-    expect(section?.className).toContain("bg-white");
+    expect(section?.className).toContain("bg-gradient-to-br");
   });
 });
 
 describe("AIWorkflow", () => {
-  it("renders all 4 pipeline steps", () => {
+  it("renders all 4 workflow cards", () => {
     render(<AIWorkflow />);
     expect(screen.getByText("Resume Analysis")).toBeInTheDocument();
     expect(screen.getByText("Job Matching")).toBeInTheDocument();
@@ -120,11 +121,12 @@ describe("AIWorkflow", () => {
     expect(screen.getByText("ATS Score")).toBeInTheDocument();
   });
 
-  it("renders arrow connectors", () => {
-    const { container } = render(<AIWorkflow />);
-    const arrows = container.querySelectorAll(".contents > div");
-    // 4 steps + 3 right-arrows + 3 down-arrows = 10 content divs
-    expect(arrows.length).toBeGreaterThanOrEqual(7);
+  it("renders numbered steps", () => {
+    render(<AIWorkflow />);
+    expect(screen.getByText("01")).toBeInTheDocument();
+    expect(screen.getByText("02")).toBeInTheDocument();
+    expect(screen.getByText("03")).toBeInTheDocument();
+    expect(screen.getByText("04")).toBeInTheDocument();
   });
 
   it("has correct section heading text", () => {
@@ -134,21 +136,18 @@ describe("AIWorkflow", () => {
     ).toBeInTheDocument();
   });
 
-  it("has gradient background classes", () => {
+  it("has dark ai-start background", () => {
     const { container } = render(<AIWorkflow />);
     const section = container.querySelector("section");
     expect(section).toBeInTheDocument();
-    expect(section?.className).toContain("bg-gradient-to-b");
-    expect(section?.className).toContain("from-slate-50");
-    expect(section?.className).toContain("to-white");
+    expect(section?.className).toContain("bg-ai-start");
   });
 
-  it("pipeline uses responsive flex layout", () => {
+  it("uses 4-column grid layout", () => {
     const { container } = render(<AIWorkflow />);
-    const pipeline = container.querySelector(
-      ".flex.flex-col.items-center"
-    );
-    expect(pipeline).toBeInTheDocument();
-    expect(pipeline?.className).toContain("md:flex-row");
+    const grid = container.querySelector(".grid");
+    expect(grid).toBeInTheDocument();
+    expect(grid?.className).toContain("grid-cols-1");
+    expect(grid?.className).toContain("lg:grid-cols-4");
   });
 });

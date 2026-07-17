@@ -9,20 +9,20 @@ import Link from "next/link";
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "/pricing" },
-    { label: "Pricing", href: "/pricing" },
+    { label: "Features", href: "/#" },
+    { label: "Pricing", href: "/#" },
   ],
   resources: [
-    { label: "Blog", href: "/blog" },
-    { label: "Help Center", href: "/help" },
+    { label: "Blog", href: "/#" },
+    { label: "Help Center", href: "/#" },
   ],
   company: [
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
+    { label: "About", href: "/#" },
+    { label: "Contact", href: "/#" },
   ],
   legal: [
-    { label: "Privacy Policy", href: "/privacy" },
-    { label: "Terms of Service", href: "/terms" },
+    { label: "Privacy Policy", href: "/#" },
+    { label: "Terms of Service", href: "/#" },
   ],
 } as const;
 
@@ -73,13 +73,13 @@ export function Footer() {
             </p>
             <div className="mt-4 sm:mt-0 flex gap-4">
               <Link
-                href="/privacy"
+                href="/#"
                 className="hover:text-white transition-colors"
               >
                 Privacy
               </Link>
               <Link
-                href="/terms"
+                href="/#"
                 className="hover:text-white transition-colors"
               >
                 Terms

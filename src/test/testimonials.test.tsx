@@ -24,6 +24,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("lucide-react", () => ({
+  User: () => <span data-testid="user-icon" />,
+}));
+
 // ── Import after mocks ─────────────────────────────────────
 
 import { TestimonialCard } from "@/components/landing/testimonial-card";
@@ -53,43 +57,47 @@ describe("TestimonialCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("displays initials in avatar circle", () => {
-    render(<TestimonialCard {...defaultProps} />);
-    expect(screen.getByText("SC")).toBeInTheDocument();
-  });
-
-  it("quote contains quotation marks", () => {
-    render(<TestimonialCard {...defaultProps} />);
-    const quote = screen.getByText(/AutoApply helped me craft/);
-    expect(quote.textContent).toContain("“");
-    expect(quote.textContent).toContain("”");
-  });
-
-  it("applies circle avatar with bg-hero-start and white text", () => {
+  it("displays photo placeholder avatar", () => {
     const { container } = render(<TestimonialCard {...defaultProps} />);
     const avatar = container.querySelector(".rounded-full");
     expect(avatar).toBeInTheDocument();
-    expect(avatar?.className).toContain("bg-hero-start");
-    expect(avatar?.className).toContain("text-white");
+    expect(avatar?.className).toContain("bg-white/10");
   });
 
-  it("applies card container classes", () => {
+  it("quote is bold and has no quotation marks", () => {
+    render(<TestimonialCard {...defaultProps} />);
+    const quote = screen.getByText(/AutoApply helped me craft/);
+    expect(quote.className).toContain("font-semibold");
+    expect(quote.className).toContain("text-white");
+    expect(quote.textContent).not.toContain("“");
+    expect(quote.textContent).not.toContain("”");
+  });
+
+  it("attribution has lighter styling", () => {
+    render(<TestimonialCard {...defaultProps} />);
+    const nameEl = screen.getByText("Sarah Chen");
+    expect(nameEl.className).toContain("font-medium");
+    expect(nameEl.className).toContain("text-white/80");
+  });
+
+  it("applies gradient card classes", () => {
     const { container } = render(<TestimonialCard {...defaultProps} />);
     const card = container.firstChild as HTMLElement;
-    expect(card.className).toContain("rounded-xl");
-    expect(card.className).toContain("border");
-    expect(card.className).toContain("bg-white");
+    expect(card.className).toContain("rounded-2xl");
+    expect(card.className).toContain("bg-gradient-to-br");
     expect(card.className).toContain("p-6");
-    expect(card.className).toContain("shadow-sm");
   });
 });
 
 describe("Testimonials", () => {
-  it("renders all 3 testimonial cards", () => {
+  it("renders all 6 testimonial cards", () => {
     render(<Testimonials />);
     expect(screen.getByText("Sarah Chen")).toBeInTheDocument();
     expect(screen.getByText("Marcus Johnson")).toBeInTheDocument();
     expect(screen.getByText("Priya Patel")).toBeInTheDocument();
+    expect(screen.getByText("Alex Rivera")).toBeInTheDocument();
+    expect(screen.getByText("Jamie Nguyen")).toBeInTheDocument();
+    expect(screen.getByText("Taylor Kim")).toBeInTheDocument();
   });
 
   it("renders section heading text", () => {
@@ -97,21 +105,21 @@ describe("Testimonials", () => {
     expect(screen.getByText("Loved by job seekers")).toBeInTheDocument();
   });
 
-  it("has gradient background classes", () => {
+  it("has testimonials-start background", () => {
     const { container } = render(<Testimonials />);
     const section = container.querySelector("section");
     expect(section).toBeInTheDocument();
-    expect(section?.className).toContain("bg-gradient-to-b");
-    expect(section?.className).toContain("from-white");
-    expect(section?.className).toContain("to-slate-50");
+    expect(section?.className).toContain("bg-testimonials-start");
   });
 
-  it("grid uses responsive layout classes", () => {
+  it("uses carousel layout", () => {
     const { container } = render(<Testimonials />);
-    const grid = container.querySelector(".grid");
-    expect(grid).toBeInTheDocument();
-    expect(grid?.className).toContain("grid-cols-1");
-    expect(grid?.className).toContain("md:grid-cols-2");
-    expect(grid?.className).toContain("lg:grid-cols-3");
+    const carousel = container.querySelector(".overflow-x-auto");
+    expect(carousel).toBeInTheDocument();
+    expect(carousel?.className).toContain("snap-x");
+    expect(carousel?.className).toContain("snap-mandatory");
+    const cardWrapper = carousel?.querySelector(".snap-center");
+    expect(cardWrapper).toBeInTheDocument();
+    expect(cardWrapper?.className).toContain("shrink-0");
   });
 });

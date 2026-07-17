@@ -1,26 +1,35 @@
 // ─────────────────────────────────────────────────────────────
 // Workflow Step
 // ─────────────────────────────────────────────────────────────
-// Individual step in the AI workflow pipeline.
-// Shows a numbered circle, icon, and label.
+// Individual step card in the AI workflow grid.
+// Dark gradient card with icon, number, label, and description.
 // ─────────────────────────────────────────────────────────────
 
 interface WorkflowStepProps {
-  number: number;
   icon: React.ComponentType<{ className?: string }>;
+  number: string;
   label: string;
+  description?: string;
+  gradient?: string;
 }
 
-export function WorkflowStep({ number, icon: Icon, label }: WorkflowStepProps) {
+export function WorkflowStep({
+  icon: Icon,
+  number,
+  label,
+  description,
+  gradient = "from-blue-900/80 to-slate-800/90",
+}: WorkflowStepProps) {
   return (
-    <div className="flex flex-col items-center text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-white font-heading font-bold text-lg">
-        {number}
+    <div className={`rounded-2xl bg-gradient-to-br ${gradient} p-6 flex flex-col h-full`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <span className="text-sm font-medium text-white/50">{number}</span>
       </div>
-      <Icon className="h-6 w-6 text-accent mt-3" />
-      <span className="mt-2 text-sm font-medium text-text-primary">
-        {label}
-      </span>
+      <h3 className="font-heading text-xl font-bold text-white">{label}</h3>
+      <p className="text-sm text-slate-300 mt-2 flex-1">{description}</p>
     </div>
   );
 }

@@ -24,20 +24,16 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-vi.mock("lucide-react", () => ({
-  FileText: () => <span data-testid="file-text-icon" />,
-  User: () => <span data-testid="user-icon" />,
-  Briefcase: () => <span data-testid="briefcase-icon" />,
-  GraduationCap: () => <span data-testid="graduation-cap-icon" />,
-  FolderOpen: () => <span data-testid="folder-open-icon" />,
-  Wrench: () => <span data-testid="wrench-icon" />,
-}));
-
 // ── Import after mocks ─────────────────────────────────────
 
 import { FeatureCard } from "@/components/landing/feature-card";
 import { FeatureShowcase } from "@/components/landing/feature-showcase";
-import { FileText } from "lucide-react";
+
+// ── Test SVG Icon Component ─────────────────────────────────
+
+const TestIcon = ({ className }: { className?: string }) => (
+  <svg className={className} data-testid="test-icon"><circle /></svg>
+);
 
 // ── Tests ──────────────────────────────────────────────────
 
@@ -48,7 +44,7 @@ afterEach(() => {
 
 describe("FeatureCard", () => {
   const defaultProps = {
-    icon: FileText,
+    icon: TestIcon,
     title: "Resume Creation",
     description: "Build professional resumes with AI-powered suggestions.",
   };
@@ -61,28 +57,24 @@ describe("FeatureCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("applies card container classes", () => {
+  it("applies gradient card classes", () => {
     const { container } = render(<FeatureCard {...defaultProps} />);
     const card = container.firstChild as HTMLElement;
-    expect(card.className).toContain("rounded-xl");
-    expect(card.className).toContain("border");
-    expect(card.className).toContain("bg-white");
+    expect(card.className).toContain("rounded-2xl");
+    expect(card.className).toContain("bg-gradient-to-br");
     expect(card.className).toContain("p-6");
-    expect(card.className).toContain("shadow-sm");
   });
 
   it("applies hover effect classes", () => {
     const { container } = render(<FeatureCard {...defaultProps} />);
     const card = container.firstChild as HTMLElement;
-    expect(card.className).toContain("motion-safe:hover:shadow-md");
+    expect(card.className).toContain("motion-safe:hover:shadow-lg");
     expect(card.className).toContain("motion-safe:hover:-translate-y-1");
   });
 
-  it("renders icon in container with bg-hero-start/10 background", () => {
-    const { container } = render(<FeatureCard {...defaultProps} />);
-    // Find the icon container (the div with the icon inside)
-    const iconContainer = container.querySelector(".bg-hero-start\\/10");
-    expect(iconContainer).toBeInTheDocument();
+  it("renders custom icon component", () => {
+    render(<FeatureCard {...defaultProps} />);
+    expect(screen.getByTestId("test-icon")).toBeInTheDocument();
   });
 });
 
@@ -118,12 +110,10 @@ describe("FeatureShowcase", () => {
     expect(grid?.className).toContain("lg:grid-cols-3");
   });
 
-  it("section has gradient background", () => {
+  it("section has features-start background", () => {
     const { container } = render(<FeatureShowcase />);
     const section = container.querySelector("section");
     expect(section).toBeInTheDocument();
-    expect(section?.className).toContain("bg-gradient-to-b");
-    expect(section?.className).toContain("from-white");
-    expect(section?.className).toContain("to-slate-50");
+    expect(section?.className).toContain("bg-features-start");
   });
 });
