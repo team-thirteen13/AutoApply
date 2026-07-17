@@ -185,8 +185,8 @@ describe("optimizeResume service", () => {
       if (result.success) {
         // Employer should be restored to source value
         expect(result.data.optimizedResume.experiences?.[0].company).toBe("TechCorp");
-        // Warning should be added about the repair
-        expect(result.data.warnings.some((w) => w.includes("repaired"))).toBe(true);
+        // Warning should be added about the overlay
+        expect(result.data.warnings.some((w) => w.includes("restored") || w.includes("Immutable"))).toBe(true);
       }
     });
   });
@@ -229,7 +229,7 @@ describe("optimizeResume service", () => {
       if (result.success) {
         const skillNames = result.data.optimizedResume.skills?.map((s) => s.name);
         expect(skillNames).not.toContain("AWS");
-        expect(result.data.warnings.some((w) => w.includes("repaired"))).toBe(true);
+        expect(result.data.warnings.some((w) => w.includes("restored") || w.includes("Immutable"))).toBe(true);
       }
     });
   });

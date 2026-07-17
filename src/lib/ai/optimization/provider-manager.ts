@@ -202,8 +202,7 @@ export class ProviderManager {
           attempt,
           this.retryPolicy.baseDelayMs,
           this.retryPolicy.maxDelayMs,
-          (lastError as ProviderError & { retryAfterMs?: number })
-            .retryAfterMs,
+          lastError.retryAfterMs,
         );
 
         await sleep(delay);

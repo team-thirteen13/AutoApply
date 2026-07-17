@@ -186,9 +186,9 @@ describe("Optimization Config", () => {
     it("uses custom prompt version", () => {
       process.env.AI_PROVIDER = "groq";
       process.env.GROQ_API_KEY = "test";
-      process.env.AI_PROMPT_VERSION = "ats-v2";
+      process.env.AI_PROMPT_VERSION = "ats-v1";
       const config = buildOptimizationConfig();
-      expect(config!.promptVersion).toBe("ats-v2");
+      expect(config!.promptVersion).toBe("ats-v1");
     });
 
     it("defaults prompt version to ats-v1", () => {
@@ -215,6 +215,34 @@ describe("Optimization Config", () => {
       process.env.AI_MAX_RETRIES = "abc";
       expect(() => buildOptimizationConfig()).toThrow(
         'Invalid numeric value for AI_MAX_RETRIES',
+      );
+    });
+  });
+
+  describe("prompt version validation", () => {
+    it("accepts supported prompt version", () => {
+      process.env.AI_PROVIDER = "groq";
+      process.env.GROQ_API_KEY = "test";
+      process.env.AI_PROMPT_VERSION = "ats-v1";
+      const config = buildOptimizationConfig();
+      expect(config!.promptVersion).toBe("ats-v1");
+    });
+
+    it("throws for unsupported prompt version", () => {
+      process.env.AI_PROVIDER = "groq";
+      process.env.GROQ_API_KEY = "test";
+      process.env.AI_PROMPT_VERSION = "ats-v99";
+      expect(() => buildOptimizationConfig()).toThrow(
+        'Unsupported AI_PROMPT_VERSION: "ats-v99"',
+      );
+    });
+
+    it("throws for arbitrary prompt version", () => {
+      process.env.AI_PROVIDER = "groq";
+      process.env.GROQ_API_KEY = "test";
+      process.env.AI_PROMPT_VERSION = "evil-version";
+      expect(() => buildOptimizationConfig()).toThrow(
+        'Unsupported AI_PROMPT_VERSION',
       );
     });
   });

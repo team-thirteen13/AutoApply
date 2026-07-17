@@ -2,8 +2,11 @@
 // Factual Preservation Validation
 // ─────────────────────────────────────────────────────────────
 // Deterministic safeguards to ensure the AI provider does not
-// alter immutable factual fields. Compares optimized output
-// against the source resume and rejects unauthorized changes.
+// alter immutable factual fields or invent new facts.
+//
+// Strategy: deterministic source-overlay for immutable fields,
+// membership-based validation for collections, and expanded
+// metric fabrication detection.
 // ─────────────────────────────────────────────────────────────
 
 import type { ResumeSnapshot } from "@/types/resume";
@@ -22,356 +25,257 @@ export interface FactualViolation {
   actual: string;
 }
 
-// ── Immutable Fields ─────────────────────────────────────────
+// ── Deterministic Source Overlay ─────────────────────────────
+/**
+ * Creates a safe copy of the optimized resume by deterministically
+ * overwriting all immutable fields from the source. This is the
+ * primary defense — violations are detected but the overlay
+ * ensures correctness regardless.
+ */
+export function overlayImmutableFields(
+  source: ResumeSnapshot,
+  optimized: ResumeSnapshot,
+): ResumeSnapshot {
+  // Deep clone to avoid mutating the optimized result
+  const safe = JSON.parse(JSON.stringify(optimized)) as ResumeSnapshot;
 
-interface ImmutableField {
-  path: string;
-  getValue: (snapshot: ResumeSnapshot) => string | undefined;
+  // Overlay profile immutable fields
+  if (safe.profile && source.profile) {
+    safe.profile.name = source.profile.name;
+    safe.profile.title = source.profile.title;
+    safe.profile.email = source.profile.email;
+    safe.profile.phone = source.profile.phone;
+    safe.profile.city = source.profile.city;
+    safe.profile.country = source.profile.country;
+    safe.profile.githubUrl = source.profile.githubUrl;
+    safe.profile.linkedinUrl = source.profile.linkedinUrl;
+    safe.profile.portfolioUrl = source.profile.portfolioUrl;
+    safe.profile.photoUrl = source.profile.photoUrl;
+  }
+
+  // Overlay experiences — match by ID or array position
+  // If source has no experiences, remove any from optimized
+  if (!source.experiences) {
+    safe.experiences = undefined;
+  } else if (safe.experiences && source.experiences) {
+    const sourceMap = buildIndexMap(source.experiences);
+    safe.experiences = safe.experiences.map((optExp) => {
+      const srcExp = findSourceItem(source.experiences!, sourceMap, optExp.id, {
+        company: optExp.company,
+        title: optExp.title,
+        startDate: optExp.startDate,
+      });
+      if (!srcExp) {
+        // New experience not in source — remove it
+        return null;
+      }
+      return {
+        ...optExp,
+        id: srcExp.id,
+        company: srcExp.company,
+        title: srcExp.title,
+        startDate: srcExp.startDate,
+        endDate: srcExp.endDate,
+        isCurrent: srcExp.isCurrent,
+        // Skills: filter to only source skills
+        skills: filterToSourceMembers(optExp.skills ?? [], srcExp.skills ?? []),
+      };
+    }).filter(Boolean) as NonNullable<ResumeSnapshot["experiences"]>;
+
+    // Check count mismatch
+    if (safe.experiences.length !== source.experiences.length) {
+      // Restore source experiences entirely if count doesn't match
+      safe.experiences = source.experiences.map((exp) => ({ ...exp }));
+    }
+  }
+
+  // Overlay education — match by ID or array position
+  if (!source.education) {
+    safe.education = undefined;
+  } else if (safe.education && source.education) {
+    const sourceMap = buildIndexMap(source.education);
+    safe.education = safe.education.map((optEdu) => {
+      const srcEdu = findSourceItem(source.education!, sourceMap, optEdu.id, {
+        university: optEdu.university,
+        degree: optEdu.degree,
+        startDate: optEdu.startDate,
+      });
+      if (!srcEdu) return null;
+      return {
+        ...optEdu,
+        id: srcEdu.id,
+        university: srcEdu.university,
+        degree: srcEdu.degree,
+        startDate: srcEdu.startDate,
+        endDate: srcEdu.endDate,
+        isCurrent: srcEdu.isCurrent,
+      };
+    }).filter(Boolean) as NonNullable<ResumeSnapshot["education"]>;
+
+    if (safe.education.length !== source.education.length) {
+      safe.education = source.education.map((edu) => ({ ...edu }));
+    }
+  }
+
+  // Overlay projects — match by ID or array position
+  if (!source.projects) {
+    safe.projects = undefined;
+  } else if (safe.projects && source.projects) {
+    const sourceMap = buildIndexMap(source.projects);
+    safe.projects = safe.projects.map((optProj) => {
+      const srcProj = findSourceItem(source.projects!, sourceMap, optProj.id, {
+        title: optProj.title,
+      });
+      if (!srcProj) return null;
+      return {
+        ...optProj,
+        id: srcProj.id,
+        title: srcProj.title,
+        // Technologies: filter to only source technologies
+        technologies: filterToSourceMembers(
+          optProj.technologies ?? [],
+          srcProj.technologies ?? [],
+        ),
+      };
+    }).filter(Boolean) as NonNullable<ResumeSnapshot["projects"]>;
+
+    if (safe.projects.length !== source.projects.length) {
+      safe.projects = source.projects.map((proj) => ({ ...proj }));
+    }
+  }
+
+  // Overlay certificates — match by ID or array position
+  if (!source.certificates) {
+    safe.certificates = undefined;
+  } else if (safe.certificates && source.certificates) {
+    const sourceMap = buildIndexMap(source.certificates);
+    safe.certificates = safe.certificates.map((optCert) => {
+      const srcCert = findSourceItem(
+        source.certificates!,
+        sourceMap,
+        optCert.id,
+        { name: optCert.name, startDate: optCert.startDate },
+      );
+      if (!srcCert) return null;
+      return {
+        ...optCert,
+        id: srcCert.id,
+        name: srcCert.name,
+        issuingOrganisation: srcCert.issuingOrganisation,
+        startDate: srcCert.startDate,
+        endDate: srcCert.endDate,
+      };
+    }).filter(Boolean) as NonNullable<ResumeSnapshot["certificates"]>;
+
+    if (safe.certificates.length !== source.certificates.length) {
+      safe.certificates = source.certificates.map((cert) => ({ ...cert }));
+    }
+  }
+
+  // Skills: filter to only source skill names (reordering allowed)
+  if (!source.skills) {
+    safe.skills = undefined;
+  } else if (safe.skills && source.skills) {
+    const sourceSkillNames = new Set(
+      source.skills.map((s) => s.name.toLowerCase()),
+    );
+    safe.skills = safe.skills.filter((s) =>
+      sourceSkillNames.has(s.name.toLowerCase()),
+    );
+    if (safe.skills.length !== source.skills.length) {
+      safe.skills = source.skills.map((s) => ({ ...s }));
+    }
+  }
+
+  // Languages: filter to only source language names
+  if (!source.languages) {
+    safe.languages = undefined;
+  } else if (safe.languages && source.languages) {
+    const sourceLangNames = new Set(
+      source.languages.map((l) => l.name.toLowerCase()),
+    );
+    safe.languages = safe.languages.filter((l) =>
+      sourceLangNames.has(l.name.toLowerCase()),
+    );
+    if (safe.languages.length !== source.languages.length) {
+      safe.languages = source.languages.map((l) => ({ ...l }));
+    }
+  }
+
+  return safe;
 }
 
-const IMMUTABLE_FIELDS: ImmutableField[] = [
+// ── Collection Matching Helpers ──────────────────────────────
+
+type SourceItem = { id?: string };
+
+/**
+ * Build an index map from source items by ID.
+ */
+function buildIndexMap<T extends SourceItem>(items: T[]): Map<string, T> {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    if (item.id) map.set(item.id, item);
+  }
+  return map;
+}
+
+/**
+ * Find a source item by ID first, then by signature fallback.
+ */
+function findSourceItem<T extends SourceItem>(
+  sourceItems: T[],
+  idMap: Map<string, T>,
+  optId: string | undefined,
+  signature: Record<string, unknown>,
+): T | undefined {
+  // Try ID match first
+  if (optId && idMap.has(optId)) {
+    return idMap.get(optId);
+  }
+
+  // Fallback: match by immutable signature fields
+  return sourceItems.find((item) => {
+    for (const [key, value] of Object.entries(signature)) {
+      if ((item as Record<string, unknown>)[key] !== value) return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Filter optimized array to only members present in source (case-insensitive).
+ */
+function filterToSourceMembers(
+  optimized: string[],
+  source: string[],
+): string[] {
+  const sourceSet = new Set(source.map((s) => s.toLowerCase()));
+  return optimized.filter((s) => sourceSet.has(s.toLowerCase()));
+}
+
+// ── Violation Detection (for metadata, not control flow) ────
+
+function detectImmutableViolations(
+  source: ResumeSnapshot,
+  safe: ResumeSnapshot,
+): FactualViolation[] {
+  const violations: FactualViolation[] = [];
+
   // Profile
-  {
-    path: "profile.name",
-    getValue: (s) => s.profile?.name,
-  },
-  {
-    path: "profile.email",
-    getValue: (s) => s.profile?.email,
-  },
-  {
-    path: "profile.phone",
-    getValue: (s) => s.profile?.phone,
-  },
-  {
-    path: "profile.city",
-    getValue: (s) => s.profile?.city,
-  },
-  {
-    path: "profile.country",
-    getValue: (s) => s.profile?.country,
-  },
-  {
-    path: "profile.githubUrl",
-    getValue: (s) => s.profile?.githubUrl,
-  },
-  {
-    path: "profile.linkedinUrl",
-    getValue: (s) => s.profile?.linkedinUrl,
-  },
-  {
-    path: "profile.portfolioUrl",
-    getValue: (s) => s.profile?.portfolioUrl,
-  },
-];
+  const profileChecks: [string, string | undefined, string | undefined][] = [
+    ["profile.name", source.profile?.name, safe.profile?.name],
+    ["profile.email", source.profile?.email, safe.profile?.email],
+    ["profile.phone", source.profile?.phone, safe.profile?.phone],
+  ];
 
-// ── Validators ───────────────────────────────────────────────
-
-function validateImmutableFields(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-
-  for (const field of IMMUTABLE_FIELDS) {
-    const sourceValue = field.getValue(source);
-    const optimizedValue = field.getValue(optimized);
-
-    if (
-      sourceValue !== undefined &&
-      optimizedValue !== undefined &&
-      sourceValue !== optimizedValue
-    ) {
+  for (const [field, src, opt] of profileChecks) {
+    if (src !== undefined && opt !== undefined && src !== opt) {
       violations.push({
-        section: field.path.split(".")[0],
-        field: field.path,
-        expected: sourceValue,
-        actual: optimizedValue,
-      });
-    }
-  }
-
-  return violations;
-}
-
-function validateExperiences(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-  const sourceExps = source.experiences ?? [];
-  const optimizedExps = optimized.experiences ?? [];
-
-  if (sourceExps.length !== optimizedExps.length) {
-    violations.push({
-      section: "experiences",
-      field: "count",
-      expected: String(sourceExps.length),
-      actual: String(optimizedExps.length),
-    });
-    return violations;
-  }
-
-  for (let i = 0; i < sourceExps.length; i++) {
-    const src = sourceExps[i];
-    const opt = optimizedExps[i];
-
-    // Company name is immutable
-    if (src.company !== opt.company) {
-      violations.push({
-        section: "experiences",
-        field: `experiences[${i}].company`,
-        expected: src.company,
-        actual: opt.company,
-      });
-    }
-
-    // Job title is immutable
-    if (src.title !== opt.title) {
-      violations.push({
-        section: "experiences",
-        field: `experiences[${i}].title`,
-        expected: src.title,
-        actual: opt.title,
-      });
-    }
-
-    // Dates are immutable
-    if (src.startDate !== opt.startDate) {
-      violations.push({
-        section: "experiences",
-        field: `experiences[${i}].startDate`,
-        expected: src.startDate,
-        actual: opt.startDate,
-      });
-    }
-    if (src.endDate !== opt.endDate) {
-      violations.push({
-        section: "experiences",
-        field: `experiences[${i}].endDate`,
-        expected: src.endDate ?? "null",
-        actual: opt.endDate ?? "null",
-      });
-    }
-
-    // Skills: can be reordered but not added
-    const srcSkills = new Set(src.skills ?? []);
-    const optSkills = opt.skills ?? [];
-    for (const skill of optSkills) {
-      if (!srcSkills.has(skill)) {
-        violations.push({
-          section: "experiences",
-          field: `experiences[${i}].skills`,
-          expected: `skill "${skill}" not in source`,
-          actual: `skill "${skill}" added`,
-        });
-      }
-    }
-  }
-
-  return violations;
-}
-
-function validateEducation(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-  const sourceEdu = source.education ?? [];
-  const optimizedEdu = optimized.education ?? [];
-
-  if (sourceEdu.length !== optimizedEdu.length) {
-    violations.push({
-      section: "education",
-      field: "count",
-      expected: String(sourceEdu.length),
-      actual: String(optimizedEdu.length),
-    });
-    return violations;
-  }
-
-  for (let i = 0; i < sourceEdu.length; i++) {
-    const src = sourceEdu[i];
-    const opt = optimizedEdu[i];
-
-    if (src.university !== opt.university) {
-      violations.push({
-        section: "education",
-        field: `education[${i}].university`,
-        expected: src.university,
-        actual: opt.university,
-      });
-    }
-    if (src.degree !== opt.degree) {
-      violations.push({
-        section: "education",
-        field: `education[${i}].degree`,
-        expected: src.degree,
-        actual: opt.degree,
-      });
-    }
-    if (src.startDate !== opt.startDate) {
-      violations.push({
-        section: "education",
-        field: `education[${i}].startDate`,
-        expected: src.startDate,
-        actual: opt.startDate,
-      });
-    }
-    if (src.endDate !== opt.endDate) {
-      violations.push({
-        section: "education",
-        field: `education[${i}].endDate`,
-        expected: src.endDate ?? "null",
-        actual: opt.endDate ?? "null",
-      });
-    }
-  }
-
-  return violations;
-}
-
-function validateProjects(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-  const sourceProj = source.projects ?? [];
-  const optimizedProj = optimized.projects ?? [];
-
-  if (sourceProj.length !== optimizedProj.length) {
-    violations.push({
-      section: "projects",
-      field: "count",
-      expected: String(sourceProj.length),
-      actual: String(optimizedProj.length),
-    });
-    return violations;
-  }
-
-  for (let i = 0; i < sourceProj.length; i++) {
-    const src = sourceProj[i];
-    const opt = optimizedProj[i];
-
-    if (src.title !== opt.title) {
-      violations.push({
-        section: "projects",
-        field: `projects[${i}].title`,
-        expected: src.title,
-        actual: opt.title,
-      });
-    }
-
-    // Technologies: can be reordered but not added
-    const srcTech = new Set(src.technologies ?? []);
-    const optTech = opt.technologies ?? [];
-    for (const tech of optTech) {
-      if (!srcTech.has(tech)) {
-        violations.push({
-          section: "projects",
-          field: `projects[${i}].technologies`,
-          expected: `technology "${tech}" not in source`,
-          actual: `technology "${tech}" added`,
-        });
-      }
-    }
-  }
-
-  return violations;
-}
-
-function validateCertificates(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-  const sourceCerts = source.certificates ?? [];
-  const optimizedCerts = optimized.certificates ?? [];
-
-  if (sourceCerts.length !== optimizedCerts.length) {
-    violations.push({
-      section: "certificates",
-      field: "count",
-      expected: String(sourceCerts.length),
-      actual: String(optimizedCerts.length),
-    });
-    return violations;
-  }
-
-  for (let i = 0; i < sourceCerts.length; i++) {
-    const src = sourceCerts[i];
-    const opt = optimizedCerts[i];
-
-    if (src.name !== opt.name) {
-      violations.push({
-        section: "certificates",
-        field: `certificates[${i}].name`,
-        expected: src.name,
-        actual: opt.name,
-      });
-    }
-    if (src.issuingOrganisation !== opt.issuingOrganisation) {
-      violations.push({
-        section: "certificates",
-        field: `certificates[${i}].issuingOrganisation`,
-        expected: src.issuingOrganisation ?? "undefined",
-        actual: opt.issuingOrganisation ?? "undefined",
-      });
-    }
-    if (src.startDate !== opt.startDate) {
-      violations.push({
-        section: "certificates",
-        field: `certificates[${i}].startDate`,
-        expected: src.startDate,
-        actual: opt.startDate,
-      });
-    }
-  }
-
-  return violations;
-}
-
-function validateSkills(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-  const sourceSkills = new Set(
-    (source.skills ?? []).map((s) => s.name.toLowerCase()),
-  );
-  const optimizedSkills = optimized.skills ?? [];
-
-  for (const skill of optimizedSkills) {
-    if (!sourceSkills.has(skill.name.toLowerCase())) {
-      violations.push({
-        section: "skills",
-        field: "skills",
-        expected: `skill "${skill.name}" not in source`,
-        actual: `skill "${skill.name}" added`,
-      });
-    }
-  }
-
-  return violations;
-}
-
-function validateLanguages(
-  source: ResumeSnapshot,
-  optimized: ResumeSnapshot,
-): FactualViolation[] {
-  const violations: FactualViolation[] = [];
-  const sourceLangs = new Set(
-    (source.languages ?? []).map((l) => l.name.toLowerCase()),
-  );
-  const optimizedLangs = optimized.languages ?? [];
-
-  for (const lang of optimizedLangs) {
-    if (!sourceLangs.has(lang.name.toLowerCase())) {
-      violations.push({
-        section: "languages",
-        field: "languages",
-        expected: `language "${lang.name}" not in source`,
-        actual: `language "${lang.name}" added`,
+        section: "profile",
+        field,
+        expected: src,
+        actual: opt,
       });
     }
   }
@@ -381,67 +285,69 @@ function validateLanguages(
 
 // ── Fake Metric Detection ────────────────────────────────────
 
-const METRIC_PATTERNS = [
-  /\b\d+%\b/, // 40%, 85%
-  /\b\d+\s*(?:percent|percentage)\b/i,
-  /\b(?:increased|improved|reduced|decreased|grew|boosted)\b.*?\b\d+/i,
-  /\b\d+\s*(?:x|times)\b/i,
+/**
+ * Expanded patterns to catch fabricated metrics.
+ * Source text is checked to ensure the metric already exists.
+ * Note: avoid \b after non-word chars like % — use lookahead/lookbehind instead.
+ */
+const METRIC_PATTERNS: RegExp[] = [
+  /\b\d+%(?!\w)/,                       // 40%, 85%
+  /\b\d+\s*(?:percent|percentage)\b/i,  // 40 percent, 85 percentage
+  /\$\d[\d,]*(?:\.\d+)?[KMBkmb]?(?!\w)/, // $1M, $100K, $1.5B
+  /\b\d+\s*(?:x|times)\b/i,            // 2x, 3 times
+  /\b(?:doubled|tripled|quadrupled)\b/i, // doubled, tripled
+  /\b(?:reduced|cut|increased|improved|boosted|grew|decreased)\s+(?:by\s+)?(?:a\s+)?(?:factor\s+of\s+)?\d+/i,
+  /\b(?:by|to)\s+(?:a\s+)?(?:half|third|quarter)\b/i,
+  /\b\d[\d,]*\s*(?:users|customers|clients|requests|transactions|employees|team\s+members|people|hours|days|months|years)\b/i,
+  /\bten\s+thousand\b/i,
+  /\bhundred\s+thousand\b/i,
+  /\b(?:one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:million|billion|thousand)\b/i,
 ];
 
-function containsFakeMetrics(
+function containsFabricatedMetrics(
   optimized: ResumeSnapshot,
   source: ResumeSnapshot,
 ): FactualViolation[] {
   const violations: FactualViolation[] = [];
-
-  // Extract all numeric values from source resume
   const sourceText = JSON.stringify(source);
 
-  // Check summary for new metrics
+  // Check summary
   if (optimized.summary) {
     for (const pattern of METRIC_PATTERNS) {
       const matches = optimized.summary.match(pattern);
-      if (matches) {
-        const metricValue = matches[0];
-        // Check if this metric exists in source
-        if (!sourceText.includes(metricValue)) {
-          violations.push({
-            section: "summary",
-            field: "summary",
-            expected: "no new metrics",
-            actual: `contains metric "${metricValue}" not in source`,
-          });
-        }
+      if (matches && !sourceText.includes(matches[0])) {
+        violations.push({
+          section: "summary",
+          field: "summary",
+          expected: "no fabricated metrics",
+          actual: `contains metric "${matches[0]}" not in source`,
+        });
+        break; // One violation per section is sufficient
       }
     }
   }
 
-  // Check experience accomplishments for new metrics
+  // Check experience accomplishments
+  const sourceExps = source.experiences ?? [];
   const optimizedExps = optimized.experiences ?? [];
   for (let i = 0; i < optimizedExps.length; i++) {
-    const accomplishments = optimizedExps[i].accomplishments ?? [];
-    for (const bullet of accomplishments) {
+    const srcAccomplishments = sourceExps[i]?.accomplishments?.join(" ") ?? "";
+    const optAccomplishments = optimizedExps[i].accomplishments ?? [];
+    for (const bullet of optAccomplishments) {
       for (const pattern of METRIC_PATTERNS) {
         const matches = bullet.match(pattern);
-        if (matches) {
-          const metricValue = matches[0];
-          if (!sourceText.includes(metricValue)) {
-            // Check if source has this experience
-            const sourceExps = source.experiences ?? [];
-            const sourceExp = sourceExps[i];
-            if (sourceExp) {
-              const sourceAccomplishments =
-                sourceExp.accomplishments?.join(" ") ?? "";
-              if (!sourceAccomplishments.includes(metricValue)) {
-                violations.push({
-                  section: "experiences",
-                  field: `experiences[${i}].accomplishments`,
-                  expected: "no new metrics",
-                  actual: `contains metric "${metricValue}" not in source`,
-                });
-              }
-            }
-          }
+        if (
+          matches &&
+          !sourceText.includes(matches[0]) &&
+          !srcAccomplishments.includes(matches[0])
+        ) {
+          violations.push({
+            section: "experiences",
+            field: `experiences[${i}].accomplishments`,
+            expected: "no fabricated metrics",
+            actual: `contains metric "${matches[0]}" not in source`,
+          });
+          break;
         }
       }
     }
@@ -454,21 +360,20 @@ function containsFakeMetrics(
 
 /**
  * Validate that the optimized resume preserves all factual data
- * from the source resume.
+ * from the source resume. Returns violation metadata for
+ * change-tracking purposes.
  */
 export function validateFactualPreservation(
   source: ResumeSnapshot,
   optimized: ResumeSnapshot,
 ): FactualValidationResult {
+  // First apply the deterministic overlay
+  const safe = overlayImmutableFields(source, optimized);
+
+  // Then detect remaining violations (fabricated metrics, etc.)
   const violations: FactualViolation[] = [
-    ...validateImmutableFields(source, optimized),
-    ...validateExperiences(source, optimized),
-    ...validateEducation(source, optimized),
-    ...validateProjects(source, optimized),
-    ...validateCertificates(source, optimized),
-    ...validateSkills(source, optimized),
-    ...validateLanguages(source, optimized),
-    ...containsFakeMetrics(optimized, source),
+    ...detectImmutableViolations(source, safe),
+    ...containsFabricatedMetrics(safe, source),
   ];
 
   return {

@@ -32,6 +32,11 @@ export { ProviderManager } from "./provider-manager";
 export { optimizeResume } from "./service";
 export { validateFactualPreservation } from "./factual-preservation";
 export {
+  validateProviderOutput,
+  resumeSnapshotSchema,
+  providerOutputSchema,
+} from "./validation";
+export {
   getOptimizationConfig,
   resetOptimizationConfig,
 } from "./config";

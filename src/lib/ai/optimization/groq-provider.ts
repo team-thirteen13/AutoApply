@@ -15,8 +15,9 @@ import type {
   ProviderRequestContext,
   ProviderError,
 } from "./types";
-import type { ResumeSnapshot } from "@/types/resume";
 import { SYSTEM_PROMPT, buildUserPrompt, RESPONSE_JSON_SCHEMA } from "../prompts/ats-v1";
+import { validateProviderOutput } from "./validation";
+import { parseRetryAfter } from "./retry-after";
 
 // ── Groq API Types ───────────────────────────────────────────
 
@@ -225,17 +226,16 @@ export class GroqResumeOptimizationProvider
           retryable: false,
         };
       case 429: {
-        const retryAfter = response.headers.get("retry-after");
-        const retryAfterMs = retryAfter
-          ? parseInt(retryAfter, 10) * 1000
-          : undefined;
+        const retryAfterMs = parseRetryAfter(
+          response.headers.get("retry-after"),
+        );
         return {
           code: "rate_limited",
           message: "Groq rate limit exceeded.",
           providerId: this.id,
           retryable: true,
-          ...(retryAfterMs !== undefined && { retryAfterMs }),
-        } as ProviderError & { retryAfterMs?: number };
+          retryAfterMs,
+        };
       }
       case 500:
       case 502:
@@ -271,39 +271,24 @@ export class GroqResumeOptimizationProvider
       } satisfies ProviderError;
     }
 
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !("optimizedResume" in parsed)
-    ) {
+    const validation = validateProviderOutput(parsed);
+    if (!validation.valid) {
       throw {
         code: "malformed_provider_output" as const,
-        message: "Provider response missing 'optimizedResume' field.",
+        message: "Provider output failed schema validation.",
         providerId: this.id,
         retryable: false,
       } satisfies ProviderError;
     }
 
-    const result = parsed as {
-      optimizedResume: ResumeSnapshot;
-      changes?: Array<{
-        section: string;
-        field: string;
-        originalValue: string;
-        optimizedValue: string;
-        reason: string;
-      }>;
-      warnings?: string[];
-    };
-
     return {
       success: true,
-      optimizedResume: result.optimizedResume,
-      changes: (result.changes ?? []).map((c) => ({
+      optimizedResume: validation.data.optimizedResume,
+      changes: (validation.data.changes ?? []).map((c) => ({
         ...c,
         reason: c.reason as import("./types").ChangeReasonCategory,
       })),
-      warnings: result.warnings ?? [],
+      warnings: validation.data.warnings ?? [],
     };
   }
 }

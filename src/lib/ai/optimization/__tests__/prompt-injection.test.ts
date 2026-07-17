@@ -1,11 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { validateFactualPreservation } from "../factual-preservation";
+import {
+  validateFactualPreservation,
+  overlayImmutableFields,
+} from "../factual-preservation";
 import type { ResumeSnapshot } from "@/types/resume";
 
 /**
  * Prompt injection regression tests.
  * These tests verify that a malicious job description cannot cause
  * the optimization service to fabricate facts not in the source resume.
+ *
+ * With the deterministic overlay, added skills/employers/education are
+ * removed and changed fields are restored. Fabricated metrics are still
+ * rejected.
  */
 
 const BASE_RESUME: ResumeSnapshot = {
@@ -34,53 +41,35 @@ const BASE_RESUME: ResumeSnapshot = {
 };
 
 describe("Prompt injection protection", () => {
-  it("ignores instruction to add AWS experience", () => {
+  it("overlay removes added AWS skill", () => {
     const maliciousResult: ResumeSnapshot = {
       ...BASE_RESUME,
       skills: [
         ...BASE_RESUME.skills!,
-        {
-          name: "AWS",
-          category: "Cloud",
-          proficiency: "Expert",
-        },
+        { name: "AWS", category: "Cloud", proficiency: "Expert" },
       ],
     };
 
-    const validation = validateFactualPreservation(
-      BASE_RESUME,
-      maliciousResult,
-    );
-    expect(validation.valid).toBe(false);
-    expect(
-      validation.violations.some(
-        (v) => v.field === "skills" && v.actual.includes("AWS"),
-      ),
-    ).toBe(true);
+    const safe = overlayImmutableFields(BASE_RESUME, maliciousResult);
+    const skillNames = safe.skills?.map((s) => s.name);
+    expect(skillNames).not.toContain("AWS");
   });
 
-  it("ignores instruction to add fake skills via job description", () => {
+  it("overlay removes added Python skill", () => {
     const maliciousResult: ResumeSnapshot = {
       ...BASE_RESUME,
       skills: [
         ...BASE_RESUME.skills!,
-        {
-          name: "Python",
-          category: "Languages",
-          proficiency: "Expert",
-        },
+        { name: "Python", category: "Languages", proficiency: "Expert" },
       ],
     };
 
-    const validation = validateFactualPreservation(
-      BASE_RESUME,
-      maliciousResult,
-    );
-    // Should detect that "Python" is not in source
-    expect(validation.valid).toBe(false);
+    const safe = overlayImmutableFields(BASE_RESUME, maliciousResult);
+    const skillNames = safe.skills?.map((s) => s.name);
+    expect(skillNames).not.toContain("Python");
   });
 
-  it("ignores instruction to change job title", () => {
+  it("overlay restores changed job title", () => {
     const maliciousResult: ResumeSnapshot = {
       ...BASE_RESUME,
       experiences: [
@@ -91,17 +80,11 @@ describe("Prompt injection protection", () => {
       ],
     };
 
-    const validation = validateFactualPreservation(
-      BASE_RESUME,
-      maliciousResult,
-    );
-    expect(validation.valid).toBe(false);
-    expect(
-      validation.violations.some((v) => v.field.includes("title")),
-    ).toBe(true);
+    const safe = overlayImmutableFields(BASE_RESUME, maliciousResult);
+    expect(safe.experiences?.[0].title).toBe("Frontend Developer");
   });
 
-  it("ignores instruction to add employers", () => {
+  it("overlay removes added employer", () => {
     const maliciousResult: ResumeSnapshot = {
       ...BASE_RESUME,
       experiences: [
@@ -117,20 +100,12 @@ describe("Prompt injection protection", () => {
       ],
     };
 
-    const validation = validateFactualPreservation(
-      BASE_RESUME,
-      maliciousResult,
-    );
-    expect(validation.valid).toBe(false);
-    expect(
-      validation.violations.some(
-        (v) =>
-          v.section === "experiences" && v.field === "count",
-      ),
-    ).toBe(true);
+    const safe = overlayImmutableFields(BASE_RESUME, maliciousResult);
+    expect(safe.experiences?.length).toBe(1);
+    expect(safe.experiences?.[0].company).toBe("WebCo");
   });
 
-  it("ignores instruction to add education", () => {
+  it("overlay removes added education", () => {
     const maliciousResult: ResumeSnapshot = {
       ...BASE_RESUME,
       education: [
@@ -144,19 +119,12 @@ describe("Prompt injection protection", () => {
       ],
     };
 
-    const validation = validateFactualPreservation(
-      BASE_RESUME,
-      maliciousResult,
-    );
-    expect(validation.valid).toBe(false);
-    expect(
-      validation.violations.some(
-        (v) => v.section === "education" && v.field === "count",
-      ),
-    ).toBe(true);
+    const safe = overlayImmutableFields(BASE_RESUME, maliciousResult);
+    // Source has no education, so overlay should not add any
+    expect(safe.education).toBeUndefined();
   });
 
-  it("ignores instruction to change contact info", () => {
+  it("overlay restores changed contact info", () => {
     const maliciousResult: ResumeSnapshot = {
       ...BASE_RESUME,
       profile: {
@@ -166,17 +134,22 @@ describe("Prompt injection protection", () => {
       },
     };
 
+    const safe = overlayImmutableFields(BASE_RESUME, maliciousResult);
+    expect(safe.profile?.email).toBe("jane@example.com");
+    expect(safe.profile?.phone).toBe("+1-555-0100");
+  });
+
+  it("fabricated metrics are rejected even after overlay", () => {
+    const maliciousResult: ResumeSnapshot = {
+      ...BASE_RESUME,
+      summary: "Improved performance by 40%.",
+    };
+
     const validation = validateFactualPreservation(
       BASE_RESUME,
       maliciousResult,
     );
     expect(validation.valid).toBe(false);
-    expect(
-      validation.violations.some((v) => v.field.includes("email")),
-    ).toBe(true);
-    expect(
-      validation.violations.some((v) => v.field.includes("phone")),
-    ).toBe(true);
   });
 
   it("allows legitimate optimizations despite malicious context", () => {

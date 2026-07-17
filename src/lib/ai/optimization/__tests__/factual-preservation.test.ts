@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { validateFactualPreservation } from "../factual-preservation";
+import {
+  validateFactualPreservation,
+  overlayImmutableFields,
+} from "../factual-preservation";
 import type { ResumeSnapshot } from "@/types/resume";
 
 const SOURCE_RESUME: ResumeSnapshot = {
@@ -60,190 +63,132 @@ const SOURCE_RESUME: ResumeSnapshot = {
 };
 
 describe("validateFactualPreservation", () => {
-  describe("employer cannot change", () => {
-    it("rejects changed company name", () => {
+  // With the deterministic overlay, changed immutable fields are silently
+  // restored from source. These tests verify the overlay fixes them
+  // (valid: true after overlay), while fabricated metrics still fail.
+
+  describe("immutable fields are restored by overlay", () => {
+    it("restores changed company name", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         experiences: [
-          {
-            ...SOURCE_RESUME.experiences![0],
-            company: "DifferentCorp",
-          },
+          { ...SOURCE_RESUME.experiences![0], company: "DifferentCorp" },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(result.violations.some((v) => v.field.includes("company"))).toBe(
-        true,
-      );
+      expect(result.valid).toBe(true);
     });
-  });
 
-  describe("job title cannot change", () => {
-    it("rejects changed job title", () => {
+    it("restores changed job title", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         experiences: [
-          {
-            ...SOURCE_RESUME.experiences![0],
-            title: "Staff Engineer",
-          },
+          { ...SOURCE_RESUME.experiences![0], title: "Staff Engineer" },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(result.violations.some((v) => v.field.includes("title"))).toBe(
-        true,
-      );
+      expect(result.valid).toBe(true);
     });
-  });
 
-  describe("dates cannot change", () => {
-    it("rejects changed start date", () => {
+    it("restores changed dates", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         experiences: [
-          {
-            ...SOURCE_RESUME.experiences![0],
-            startDate: "2021-01",
-          },
+          { ...SOURCE_RESUME.experiences![0], startDate: "2021-01" },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(
-        result.violations.some((v) => v.field.includes("startDate")),
-      ).toBe(true);
+      expect(result.valid).toBe(true);
     });
 
-    it("rejects changed end date", () => {
-      const optimized: ResumeSnapshot = {
-        ...SOURCE_RESUME,
-        experiences: [
-          {
-            ...SOURCE_RESUME.experiences![0],
-            endDate: "2023-12",
-          },
-        ],
-      };
-
-      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(
-        result.violations.some((v) => v.field.includes("endDate")),
-      ).toBe(true);
-    });
-  });
-
-  describe("school cannot change", () => {
-    it("rejects changed university name", () => {
+    it("restores changed university", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         education: [
-          {
-            ...SOURCE_RESUME.education![0],
-            university: "Stanford",
-          },
+          { ...SOURCE_RESUME.education![0], university: "Stanford" },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(
-        result.violations.some((v) => v.field.includes("university")),
-      ).toBe(true);
+      expect(result.valid).toBe(true);
     });
-  });
 
-  describe("degree cannot change", () => {
-    it("rejects changed degree", () => {
+    it("restores changed degree", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
-        education: [
-          {
-            ...SOURCE_RESUME.education![0],
-            degree: "MS",
-          },
-        ],
+        education: [{ ...SOURCE_RESUME.education![0], degree: "MS" }],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(result.violations.some((v) => v.field.includes("degree"))).toBe(
-        true,
-      );
+      expect(result.valid).toBe(true);
     });
-  });
 
-  describe("certification cannot change", () => {
-    it("rejects changed certification name", () => {
+    it("restores changed certification name", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         certificates: [
-          {
-            ...SOURCE_RESUME.certificates![0],
-            name: "AWS Developer",
-          },
+          { ...SOURCE_RESUME.certificates![0], name: "AWS Developer" },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(result.violations.some((v) => v.field.includes("name"))).toBe(
-        true,
-      );
+      expect(result.valid).toBe(true);
     });
-  });
 
-  describe("contact information cannot change", () => {
-    it("rejects changed email", () => {
+    it("restores changed contact info", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         profile: {
           ...SOURCE_RESUME.profile,
-          email: "new@example.com",
-        },
-      };
-
-      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(result.violations.some((v) => v.field.includes("email"))).toBe(
-        true,
-      );
-    });
-
-    it("rejects changed phone", () => {
-      const optimized: ResumeSnapshot = {
-        ...SOURCE_RESUME,
-        profile: {
-          ...SOURCE_RESUME.profile,
+          email: "hacker@evil.com",
           phone: "+1-555-9999",
         },
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(result.violations.some((v) => v.field.includes("phone"))).toBe(
-        true,
-      );
+      expect(result.valid).toBe(true);
+    });
+
+    it("removes unsupported skills", () => {
+      const optimized: ResumeSnapshot = {
+        ...SOURCE_RESUME,
+        skills: [
+          ...SOURCE_RESUME.skills!,
+          { name: "Python", category: "Languages", proficiency: "Intermediate" },
+        ],
+      };
+      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+      expect(result.valid).toBe(true);
+    });
+
+    it("removes unsupported technologies", () => {
+      const optimized: ResumeSnapshot = {
+        ...SOURCE_RESUME,
+        projects: [
+          {
+            ...SOURCE_RESUME.projects![0],
+            technologies: ["TypeScript", "PostgreSQL", "Redis"],
+          },
+        ],
+      };
+      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+      expect(result.valid).toBe(true);
+    });
+
+    it("restores experience count from source", () => {
+      const optimized: ResumeSnapshot = {
+        ...SOURCE_RESUME,
+        experiences: [],
+      };
+      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+      expect(result.valid).toBe(true);
     });
   });
 
-  describe("fake metrics rejected", () => {
+  describe("fabricated metrics are rejected", () => {
     it("rejects summary with new percentage", () => {
       const optimized: ResumeSnapshot = {
         ...SOURCE_RESUME,
         summary: "Improved application performance by 40%.",
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
       expect(result.valid).toBe(false);
-      expect(
-        result.violations.some((v) => v.field === "summary"),
-      ).toBe(true);
     });
 
     it("rejects experience with new metric", () => {
@@ -259,81 +204,8 @@ describe("validateFactualPreservation", () => {
           },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
       expect(result.valid).toBe(false);
-      expect(
-        result.violations.some(
-          (v) =>
-            v.field.includes("accomplishments") &&
-            v.actual.includes("metric"),
-        ),
-      ).toBe(true);
-    });
-  });
-
-  describe("unsupported skills rejected", () => {
-    it("rejects new skills not in source", () => {
-      const optimized: ResumeSnapshot = {
-        ...SOURCE_RESUME,
-        skills: [
-          ...SOURCE_RESUME.skills!,
-          {
-            name: "Python",
-            category: "Languages",
-            proficiency: "Intermediate",
-          },
-        ],
-      };
-
-      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(
-        result.violations.some(
-          (v) => v.field === "skills" && v.actual.includes("Python"),
-        ),
-      ).toBe(true);
-    });
-  });
-
-  describe("job-description-only skill is not added", () => {
-    it("rejects skills from job description not in source", () => {
-      const optimized: ResumeSnapshot = {
-        ...SOURCE_RESUME,
-        skills: [
-          ...SOURCE_RESUME.skills!,
-          {
-            name: "Kubernetes",
-            category: "DevOps",
-            proficiency: "Intermediate",
-          },
-        ],
-      };
-
-      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-    });
-  });
-
-  describe("source numeric metrics may be retained", () => {
-    it("allows summary with metrics from source", () => {
-      const sourceWithMetrics: ResumeSnapshot = {
-        ...SOURCE_RESUME,
-        summary:
-          "A software engineer with 5 years of experience leading teams of 3.",
-      };
-
-      const optimized: ResumeSnapshot = {
-        ...sourceWithMetrics,
-        summary:
-          "Experienced software engineer with 5 years leading teams of 3.",
-      };
-
-      const result = validateFactualPreservation(
-        sourceWithMetrics,
-        optimized,
-      );
-      expect(result.valid).toBe(true);
     });
   });
 
@@ -344,7 +216,6 @@ describe("validateFactualPreservation", () => {
         summary:
           "Experienced software engineer with expertise in building scalable applications.",
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
       expect(result.valid).toBe(true);
     });
@@ -362,7 +233,6 @@ describe("validateFactualPreservation", () => {
           },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
       expect(result.valid).toBe(true);
     });
@@ -381,64 +251,307 @@ describe("validateFactualPreservation", () => {
           },
         ],
       };
-
       const result = validateFactualPreservation(SOURCE_RESUME, optimized);
       expect(result.valid).toBe(true);
-    });
-  });
-
-  describe("experience count mismatch", () => {
-    it("rejects different number of experiences", () => {
-      const optimized: ResumeSnapshot = {
-        ...SOURCE_RESUME,
-        experiences: [],
-      };
-
-      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(
-        result.violations.some(
-          (v) => v.section === "experiences" && v.field === "count",
-        ),
-      ).toBe(true);
     });
   });
 
   describe("identical resumes", () => {
     it("validates identical resumes as valid", () => {
-      const result = validateFactualPreservation(
-        SOURCE_RESUME,
-        SOURCE_RESUME,
-      );
+      const result = validateFactualPreservation(SOURCE_RESUME, SOURCE_RESUME);
       expect(result.valid).toBe(true);
       expect(result.violations).toHaveLength(0);
     });
   });
 
-  describe("project technologies", () => {
-    it("rejects new technologies not in source", () => {
-      const optimized: ResumeSnapshot = {
+  describe("source numeric metrics may be retained", () => {
+    it("allows summary with metrics from source", () => {
+      const sourceWithMetrics: ResumeSnapshot = {
         ...SOURCE_RESUME,
-        projects: [
-          {
-            ...SOURCE_RESUME.projects![0],
-            technologies: [
-              "TypeScript",
-              "PostgreSQL",
-              "Redis",
-            ],
-          },
-        ],
+        summary:
+          "A software engineer with 5 years of experience leading teams of 3.",
       };
-
-      const result = validateFactualPreservation(SOURCE_RESUME, optimized);
-      expect(result.valid).toBe(false);
-      expect(
-        result.violations.some(
-          (v) =>
-            v.field.includes("technologies") && v.actual.includes("Redis"),
-        ),
-      ).toBe(true);
+      const optimized: ResumeSnapshot = {
+        ...sourceWithMetrics,
+        summary:
+          "Experienced software engineer with 5 years leading teams of 3.",
+      };
+      const result = validateFactualPreservation(
+        sourceWithMetrics,
+        optimized,
+      );
+      expect(result.valid).toBe(true);
     });
+  });
+});
+
+// ── Overlay Tests ────────────────────────────────────────────
+
+describe("overlayImmutableFields", () => {
+  it("restores profile name from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      profile: { ...SOURCE_RESUME.profile, name: "Hacker" },
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.profile?.name).toBe("John Doe");
+  });
+
+  it("restores employer from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        { ...SOURCE_RESUME.experiences![0], company: "EvilCorp" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.experiences?.[0].company).toBe("TechCorp");
+  });
+
+  it("restores job title from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        { ...SOURCE_RESUME.experiences![0], title: "CEO" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.experiences?.[0].title).toBe("Senior Engineer");
+  });
+
+  it("restores dates from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        { ...SOURCE_RESUME.experiences![0], startDate: "2015-01" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.experiences?.[0].startDate).toBe("2020-01");
+  });
+
+  it("restores school from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      education: [
+        { ...SOURCE_RESUME.education![0], university: "Stanford" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.education?.[0].university).toBe("MIT");
+  });
+
+  it("restores degree from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      education: [
+        { ...SOURCE_RESUME.education![0], degree: "PhD" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.education?.[0].degree).toBe("BS");
+  });
+
+  it("restores certification name from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      certificates: [
+        { ...SOURCE_RESUME.certificates![0], name: "Fake Cert" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.certificates?.[0].name).toBe("AWS Solutions Architect");
+  });
+
+  it("restores contact info from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      profile: {
+        ...SOURCE_RESUME.profile,
+        email: "hacker@evil.com",
+        phone: "+1-555-9999",
+      },
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.profile?.email).toBe("john@example.com");
+    expect(safe.profile?.phone).toBe("+1-555-0100");
+  });
+
+  it("removes unsupported skills", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      skills: [
+        ...SOURCE_RESUME.skills!,
+        { name: "Python", category: "Languages", proficiency: "Expert" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    const skillNames = safe.skills?.map((s) => s.name);
+    expect(skillNames).not.toContain("Python");
+  });
+
+  it("removes unsupported languages", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      languages: [
+        ...SOURCE_RESUME.languages!,
+        { name: "Mandarin", proficiency: "Fluent" },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    const langNames = safe.languages?.map((l) => l.name);
+    expect(langNames).not.toContain("Mandarin");
+  });
+
+  it("removes unsupported technologies", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      projects: [
+        {
+          ...SOURCE_RESUME.projects![0],
+          technologies: [
+            ...(SOURCE_RESUME.projects![0].technologies ?? []),
+            "Redis",
+          ],
+        },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    const techs = safe.projects?.[0].technologies;
+    expect(techs).not.toContain("Redis");
+  });
+
+  it("allows summary rewrite", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      summary: "Experienced engineer with expertise in scalable systems.",
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.summary).toBe(
+      "Experienced engineer with expertise in scalable systems.",
+    );
+  });
+
+  it("allows experience bullet rewrite", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        {
+          ...SOURCE_RESUME.experiences![0],
+          accomplishments: [
+            "Architected and deployed microservices infrastructure",
+          ],
+        },
+      ],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.experiences?.[0].accomplishments?.[0]).toBe(
+      "Architected and deployed microservices infrastructure",
+    );
+  });
+
+  it("preserves experience count from source", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [],
+    };
+
+    const safe = overlayImmutableFields(SOURCE_RESUME, optimized);
+    expect(safe.experiences?.length).toBe(1);
+  });
+});
+
+// ── Expanded Metric Detection ────────────────────────────────
+
+describe("expanded metric detection", () => {
+  it("rejects currency metrics", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      summary: "Managed budgets of $1M annually.",
+    };
+
+    const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects multiplier metrics", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        {
+          ...SOURCE_RESUME.experiences![0],
+          accomplishments: ["Improved performance 3x"],
+        },
+      ],
+    };
+
+    const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects 'doubled' claims", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        {
+          ...SOURCE_RESUME.experiences![0],
+          accomplishments: ["Doubled revenue"],
+        },
+      ],
+    };
+
+    const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects 'reduced by half' claims", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      experiences: [
+        {
+          ...SOURCE_RESUME.experiences![0],
+          accomplishments: ["Reduced costs by half"],
+        },
+      ],
+    };
+
+    const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects user-count metrics", () => {
+    const optimized: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      summary: "Served 10,000 users daily.",
+    };
+
+    const result = validateFactualPreservation(SOURCE_RESUME, optimized);
+    expect(result.valid).toBe(false);
+  });
+
+  it("allows existing metrics from source", () => {
+    const sourceWithMetrics: ResumeSnapshot = {
+      ...SOURCE_RESUME,
+      summary: "Improved performance by 40%.",
+    };
+
+    const result = validateFactualPreservation(
+      sourceWithMetrics,
+      sourceWithMetrics,
+    );
+    expect(result.valid).toBe(true);
   });
 });

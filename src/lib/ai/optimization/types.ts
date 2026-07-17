@@ -33,6 +33,8 @@ export interface ProviderError {
   message: string;
   providerId?: string;
   retryable: boolean;
+  /** Retry delay in milliseconds from Retry-After header, if present. */
+  retryAfterMs?: number;
 }
 
 // ── Provider Request Context ─────────────────────────────────

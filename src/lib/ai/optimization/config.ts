@@ -153,6 +153,14 @@ export function buildOptimizationConfig(): OptimizationServiceConfig | null {
   const retryPolicy = buildRetryPolicy();
   const promptVersion = readEnv("AI_PROMPT_VERSION") ?? "ats-v1";
 
+  // Validate prompt version — only supported versions allowed
+  const supportedVersions = ["ats-v1"];
+  if (!supportedVersions.includes(promptVersion)) {
+    throw new Error(
+      `Unsupported AI_PROMPT_VERSION: "${promptVersion}". Supported: ${supportedVersions.join(", ")}.`,
+    );
+  }
+
   return { primary, fallback, retryPolicy, promptVersion };
 }
 
