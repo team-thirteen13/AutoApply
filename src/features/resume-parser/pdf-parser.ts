@@ -8,6 +8,8 @@
 
 import "server-only";
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { PDFParse } from "pdf-parse";
 import type {
   ResumeParser,
@@ -18,6 +20,31 @@ import { mapFieldsToSnapshot } from "./field-mapper";
 
 /** Minimum extractable text length to consider a PDF non-scanned. */
 const MIN_TEXT_LENGTH = 50;
+
+// ── Worker setup ────────────────────────────────────────────
+// pdfjs-dist uses a dynamic `import()` to load its worker file.
+// Under Turbopack, this import is intercepted and the worker
+// resolution fails because the bundled SSR chunks don't contain
+// the worker file. Fix: read the worker source from node_modules
+// at runtime and provide it as a data URL, bypassing the
+// bundler's module resolution entirely.
+function setupPdfWorker(): void {
+  try {
+    const workerPath = resolve(
+      process.cwd(),
+      "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+    );
+    const workerCode = readFileSync(workerPath, "utf-8");
+    const dataUrl = `data:text/javascript;base64,${Buffer.from(workerCode).toString("base64")}`;
+    PDFParse.setWorker(dataUrl);
+  } catch {
+    // If worker setup fails, pdfjs-dist will fall back to its
+    // default worker resolution. This is acceptable for
+    // production builds where the bundler handles it correctly.
+  }
+}
+
+setupPdfWorker();
 
 export class PdfResumeParser implements ResumeParser {
   async parse(buffer: Buffer): Promise<ResumeParserResult> {

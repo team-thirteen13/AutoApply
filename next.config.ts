@@ -34,3 +34,5 @@ const nextConfig: NextConfig = {
   // packages so they load from node_modules at runtime.
   serverExternalPackages: ["pdfjs-dist", "pdf-parse"],
 };
+
+export default nextConfig;
