@@ -264,7 +264,7 @@ describe("checkOptimizationAvailability", () => {
     const result = await checkOptimizationAvailability();
 
     expect(result.available).toBe(false);
-    expect(result.reason).toBe("not_configured");
+    expect(result.reason).toBe("authentication_required");
   });
 
   it("returns unavailable when config fails", async () => {

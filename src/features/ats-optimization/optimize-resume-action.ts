@@ -272,7 +272,7 @@ export async function optimizeResumeAction(
 
 export interface OptimizationAvailability {
   available: boolean;
-  reason?: "not_configured" | "configuration_error";
+  reason?: "authentication_required" | "not_configured" | "configuration_error";
 }
 
 /**
@@ -284,7 +284,7 @@ export async function checkOptimizationAvailability(): Promise<OptimizationAvail
   try {
     await requireAuthenticatedUser();
   } catch {
-    return { available: false, reason: "not_configured" };
+    return { available: false, reason: "authentication_required" };
   }
 
   try {

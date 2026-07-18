@@ -260,6 +260,7 @@ export async function createResumeWithSnapshotAction(
   title: string,
   snapshot: ResumeSnapshot,
   targetRole?: string | null,
+  versionLabel?: string,
 ): Promise<CreateResumeResult> {
   const trimmedTitle = title?.trim();
   if (!trimmedTitle) {
@@ -292,7 +293,7 @@ export async function createResumeWithSnapshotAction(
   }
 
   const versionResult = await createVersion(result.data.id, snapshot, {
-    label: "AI Generated",
+    label: versionLabel || "AI Generated",
   });
 
   if (!versionResult.success) {

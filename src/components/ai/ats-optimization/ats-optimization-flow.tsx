@@ -517,53 +517,92 @@ export function AtsOptimizationFlow({
   const finalSnapshot = useMemo(() => {
     if (!optimizationResult?.success || !editedSnapshot) return null;
 
-    // Start with the edited source snapshot
+    // Use optimized resume as the base — it contains all changes
+    const optimized = optimizationResult.data.optimizedResume;
+    const changes = optimizationResult.data.changes;
+
+    // Start from the source snapshot
     const result = { ...editedSnapshot };
 
-    // Apply accepted changes
-    for (const change of optimizationResult.data.changes) {
-      if (!acceptedChanges.has(optimizationResult.data.changes.indexOf(change))) {
-        continue; // Skip rejected changes
+    // For each collection field, decide per-item whether to use
+    // the optimized version (accepted) or the source version (rejected).
+    const COLLECTION_SECTIONS = [
+      "experiences",
+      "education",
+      "projects",
+      "certificates",
+      "skills",
+      "languages",
+    ] as const;
+
+    for (const section of COLLECTION_SECTIONS) {
+      const sourceItems = result[section];
+      const optimizedItems = optimized[section];
+      if (!Array.isArray(sourceItems) || !Array.isArray(optimizedItems)) continue;
+
+      // Determine which items have accepted changes
+      const acceptedIndices = new Set<number>();
+      const rejectedIndices = new Set<number>();
+
+      for (let ci = 0; ci < changes.length; ci++) {
+        if (changes[ci].section !== section) continue;
+        if (!acceptedChanges.has(ci)) {
+          rejectedIndices.add(ci);
+        } else {
+          acceptedIndices.add(ci);
+        }
       }
 
-      // Apply the change based on section/field
-      if (change.section === "summary" && change.field === "summary") {
-        result.summary = change.optimizedValue;
-      } else if (change.section === "experiences") {
-        // Parse field: "Company/Title.accomplishments"
-        const parts = change.field.split(".");
-        const collectionField = parts[0]; // "Company/Title.accomplishments"
-        const fieldType = parts[1]; // "accomplishments"
+      // If all changes for this section are accepted, use the optimized collection
+      if (acceptedIndices.size > 0 && rejectedIndices.size === 0) {
+        (result as Record<string, unknown>)[section] = optimizedItems;
+        continue;
+      }
 
-        if (fieldType === "accomplishments") {
-          const companyTitle = collectionField;
-          const expIndex = result.experiences?.findIndex(
-            (exp) => `${exp.company}/${exp.title}` === companyTitle,
-          );
-          if (
-            expIndex !== undefined &&
-            expIndex >= 0 &&
-            result.experiences?.[expIndex]
-          ) {
-            const exp = { ...result.experiences[expIndex] };
-            exp.accomplishments = change.optimizedValue
-              .split("\n")
-              .filter(Boolean);
-            result.experiences = [...result.experiences];
-            result.experiences[expIndex] = exp;
+      // If all changes for this section are rejected, keep the source
+      if (rejectedIndices.size > 0 && acceptedIndices.size === 0) {
+        continue;
+      }
+
+      // Mixed: apply per-item from optimized where accepted, source where rejected
+      // Match by ID or index position
+      const resultItems = sourceItems.map((sourceItem, idx) => {
+        const optimizedItem = optimizedItems[idx];
+        if (!optimizedItem) return sourceItem;
+
+        // Check if any accepted change targets this item's index
+        const hasAcceptedChange = Array.from(acceptedIndices).some((ci) => {
+          const change = changes[ci];
+          // Match by field containing the item identifier
+          if (change.field) {
+            const itemIdentifier =
+              "company" in sourceItem
+                ? `${(sourceItem as { company: string }).company}/${(sourceItem as { title: string }).title}`
+                : "name" in sourceItem
+                  ? (sourceItem as { name: string }).name
+                  : "university" in sourceItem
+                    ? (sourceItem as { university: string }).university
+                    : "title" in sourceItem
+                      ? (sourceItem as { title: string }).title
+                      : "";
+            return change.field.includes(itemIdentifier);
           }
-        }
-      } else if (change.section === "skills") {
-        // Skill reorder - parse the optimized order
-        const optimizedNames = change.optimizedValue
-          .split(", ")
-          .map((s) => s.trim());
-        const reordered = optimizedNames
-          .map((name) => result.skills?.find((s) => s.name === name))
-          .filter((s): s is NonNullable<typeof s> => Boolean(s));
-        if (result.skills && reordered.length === result.skills.length) {
-          result.skills = reordered;
-        }
+          return false;
+        });
+
+        return hasAcceptedChange ? optimizedItem : sourceItem;
+      });
+
+      (result as Record<string, unknown>)[section] = resultItems;
+    }
+
+    // Handle top-level fields (summary)
+    for (let ci = 0; ci < changes.length; ci++) {
+      const change = changes[ci];
+      if (!acceptedChanges.has(ci)) continue;
+
+      if (change.section === "summary" && change.field === "summary") {
+        result.summary = optimized.summary;
       }
     }
 
@@ -589,6 +628,7 @@ export function AtsOptimizationFlow({
         resumeTitle.trim() || "ATS Optimized Resume",
         normalized,
         targetJobTitle.trim() || null,
+        "ATS Optimized",
       );
 
       if (!result.success) {
@@ -942,6 +982,246 @@ export function AtsOptimizationFlow({
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Education */}
+        <div className="rounded-xl border border-slate-200 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-medium text-slate-700">Education</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAddItem("education")}
+            >
+              + Add
+            </Button>
+          </div>
+          {editedSnapshot.education?.map((edu, i) => (
+            <div
+              key={edu.id || i}
+              className="mb-3 rounded-lg border border-slate-100 p-3 last:mb-0"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-500">
+                  Education {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem("education", i)}
+                  className="rounded p-1 text-slate-400 hover:text-red-500"
+                  aria-label={`Remove education ${i + 1}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  value={edu.university}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "education",
+                      i,
+                      "university",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="University"
+                />
+                <Input
+                  value={edu.degree}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "education",
+                      i,
+                      "degree",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Degree"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Projects */}
+        <div className="rounded-xl border border-slate-200 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-medium text-slate-700">Projects</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAddItem("projects")}
+            >
+              + Add
+            </Button>
+          </div>
+          {editedSnapshot.projects?.map((project, i) => (
+            <div
+              key={project.id || i}
+              className="mb-3 rounded-lg border border-slate-100 p-3 last:mb-0"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-500">
+                  Project {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem("projects", i)}
+                  className="rounded p-1 text-slate-400 hover:text-red-500"
+                  aria-label={`Remove project ${i + 1}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  value={project.title}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "projects",
+                      i,
+                      "title",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Title"
+                />
+                <Input
+                  value={project.description || ""}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "projects",
+                      i,
+                      "description",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Description"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Certifications */}
+        <div className="rounded-xl border border-slate-200 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-medium text-slate-700">Certifications</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAddItem("certificates")}
+            >
+              + Add
+            </Button>
+          </div>
+          {editedSnapshot.certificates?.map((cert, i) => (
+            <div
+              key={cert.id || i}
+              className="mb-3 rounded-lg border border-slate-100 p-3 last:mb-0"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-500">
+                  Certification {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem("certificates", i)}
+                  className="rounded p-1 text-slate-400 hover:text-red-500"
+                  aria-label={`Remove certification ${i + 1}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  value={cert.name}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "certificates",
+                      i,
+                      "name",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Certification name"
+                />
+                <Input
+                  value={cert.issuingOrganisation || ""}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "certificates",
+                      i,
+                      "issuingOrganisation",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Issuing organization"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Languages */}
+        <div className="rounded-xl border border-slate-200 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-medium text-slate-700">Languages</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAddItem("languages")}
+            >
+              + Add
+            </Button>
+          </div>
+          {editedSnapshot.languages?.map((lang, i) => (
+            <div
+              key={lang.id || i}
+              className="mb-3 rounded-lg border border-slate-100 p-3 last:mb-0"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-500">
+                  Language {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem("languages", i)}
+                  className="rounded p-1 text-slate-400 hover:text-red-500"
+                  aria-label={`Remove language ${i + 1}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  value={lang.name}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "languages",
+                      i,
+                      "name",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Language"
+                />
+                <Input
+                  value={lang.proficiency || ""}
+                  onChange={(e) =>
+                    handleUpdateCollectionItem(
+                      "languages",
+                      i,
+                      "proficiency",
+                      e.target.value,
+                    )
+                  }
+                  placeholder="Proficiency"
+                />
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Navigation */}
