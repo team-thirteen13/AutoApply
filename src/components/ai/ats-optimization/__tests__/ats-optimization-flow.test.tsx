@@ -38,6 +38,18 @@ vi.mock("@/features/ats-optimization", () => ({
 vi.mock("@/app/resumes/actions", () => ({
   parseResumeFileAction: vi.fn(),
   createResumeWithSnapshotAction: vi.fn(),
+  applyToExistingResumeAction: vi.fn(),
+  listResumesAction: vi.fn().mockResolvedValue({
+    success: true,
+    data: [
+      {
+        id: "resume-1",
+        title: "My Resume",
+        targetRole: "Engineer",
+        updatedAt: "2025-01-01T00:00:00Z",
+      },
+    ],
+  }),
 }));
 
 vi.mock("@/lib/skills-normalize", () => ({

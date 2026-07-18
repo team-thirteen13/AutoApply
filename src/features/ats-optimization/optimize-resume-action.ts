@@ -14,6 +14,7 @@ import { optimizeResume } from "@/lib/ai/optimization/service";
 import { ProviderManager } from "@/lib/ai/optimization/provider-manager";
 import { GroqResumeOptimizationProvider } from "@/lib/ai/optimization/groq-provider";
 import { OpenRouterResumeOptimizationProvider } from "@/lib/ai/optimization/openrouter-provider";
+import { MockResumeOptimizationProvider } from "@/lib/ai/optimization/mock-provider";
 import { getOptimizationConfig } from "@/lib/ai/optimization/config";
 import type { ResumeSnapshot } from "@/types/resume";
 import type {
@@ -195,27 +196,36 @@ export async function optimizeResumeAction(
       };
     }
 
+    // 4. Create provider manager
+    let providerManager: ProviderManager;
+
     if (!serviceConfig) {
-      return {
-        success: false,
-        error: SAFE_ERROR_MESSAGES.configuration_error,
-        code: "configuration_error",
-      };
+      // Mock mode — use deterministic mock provider
+      const mockProvider = new MockResumeOptimizationProvider();
+      providerManager = new ProviderManager({
+        primary: mockProvider,
+        retryPolicy: {
+          maxPrimaryAttempts: 1,
+          baseDelayMs: 0,
+          maxDelayMs: 0,
+          maxTotalDurationMs: 5000,
+        },
+        promptVersion: "ats-v1",
+      });
+    } else {
+      // Real providers from config
+      const primaryProvider = new GroqResumeOptimizationProvider(serviceConfig.primary);
+      const fallbackProvider = serviceConfig.fallback
+        ? new OpenRouterResumeOptimizationProvider(serviceConfig.fallback)
+        : undefined;
+
+      providerManager = new ProviderManager({
+        primary: primaryProvider,
+        fallback: fallbackProvider,
+        retryPolicy: serviceConfig.retryPolicy,
+        promptVersion: serviceConfig.promptVersion,
+      });
     }
-
-    // 4. Create provider instances from config
-    const primaryProvider = new GroqResumeOptimizationProvider(serviceConfig.primary);
-    const fallbackProvider = serviceConfig.fallback
-      ? new OpenRouterResumeOptimizationProvider(serviceConfig.fallback)
-      : undefined;
-
-    // 5. Create provider manager
-    const providerManager = new ProviderManager({
-      primary: primaryProvider,
-      fallback: fallbackProvider,
-      retryPolicy: serviceConfig.retryPolicy,
-      promptVersion: serviceConfig.promptVersion,
-    });
 
     // 5. Invoke optimization service
     const result = await optimizeResume(
@@ -225,7 +235,7 @@ export async function optimizeResumeAction(
         targetJobTitle: request.targetJobTitle,
         targetJobDescription: request.targetJobDescription,
         optimizationMode: "ats",
-        promptVersion: serviceConfig.promptVersion,
+        promptVersion: serviceConfig?.promptVersion ?? "ats-v1",
       },
     );
 
@@ -289,8 +299,9 @@ export async function checkOptimizationAvailability(): Promise<OptimizationAvail
 
   try {
     const config = getOptimizationConfig();
+    // Mock mode (config is null) — always available
     if (!config) {
-      return { available: false, reason: "configuration_error" };
+      return { available: true };
     }
     // Check if at least one API key is configured
     if (!config.primary.apiKey) {

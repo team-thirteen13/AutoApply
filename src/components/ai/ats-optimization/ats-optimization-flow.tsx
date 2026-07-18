@@ -43,9 +43,13 @@ import {
   checkOptimizationAvailability,
   type OptimizeResumeActionResult,
 } from "@/features/ats-optimization";
-import { parseResumeFileAction } from "@/app/resumes/actions";
-import { createResumeWithSnapshotAction } from "@/app/resumes/actions";
-import type { ResumeSnapshot } from "@/types/resume";
+import {
+  parseResumeFileAction,
+  createResumeWithSnapshotAction,
+  applyToExistingResumeAction,
+  listResumesAction,
+} from "@/app/resumes/actions";
+import type { ResumeSnapshot, Resume } from "@/types/resume";
 import type { OptimizationChange } from "@/lib/ai/optimization/types";
 import { normalizeSnapshotSkills } from "@/lib/skills-normalize";
 import { normalizeSnapshotTemplate } from "@/lib/templates";
@@ -180,6 +184,11 @@ export function AtsOptimizationFlow({
     reason?: string;
   } | null>(null);
   const [resumeTitle, setResumeTitle] = useState("");
+  const [saveMode, setSaveMode] = useState<"new" | "existing">("new");
+  const [existingResumes, setExistingResumes] = useState<Resume[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>("");
+  const [existingConfirmOpen, setExistingConfirmOpen] = useState(false);
+  const [loadingResumes, setLoadingResumes] = useState(false);
 
   // ── Focus Trap ─────────────────────────────────────────────
 
@@ -237,6 +246,11 @@ export function AtsOptimizationFlow({
         setConfirmOpen(false);
         setToast(null);
         setResumeTitle("");
+        setSaveMode("new");
+        setExistingResumes([]);
+        setSelectedResumeId("");
+        setExistingConfirmOpen(false);
+        setLoadingResumes(false);
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -660,6 +674,55 @@ export function AtsOptimizationFlow({
     setAcceptedChanges(new Set());
     setStep("target-job");
   }, []);
+
+  // ── Load Existing Resumes ──────────────────────────────────
+
+  const loadExistingResumes = useCallback(async () => {
+    setLoadingResumes(true);
+    try {
+      const result = await listResumesAction();
+      if (result.success) {
+        setExistingResumes(result.data);
+      }
+    } catch {
+      // Silently fail — user can still create new
+    } finally {
+      setLoadingResumes(false);
+    }
+  }, []);
+
+  // ── Apply to Existing Resume ───────────────────────────────
+
+  const handleApplyExisting = useCallback(async () => {
+    if (!finalSnapshot || !selectedResumeId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let normalized = finalSnapshot;
+      normalized = normalizeSnapshotSkills(normalized);
+      normalized = normalizeSnapshotTemplate(normalized);
+      normalized = normalizeSnapshotDates(normalized);
+
+      const result = await applyToExistingResumeAction(
+        selectedResumeId,
+        normalized,
+      );
+
+      if (!result.success) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      router.push(`/resumes/${result.resumeId}/edit`);
+      onClose();
+    } catch {
+      setError("Failed to apply optimization. Please try again.");
+      setLoading(false);
+    }
+  }, [finalSnapshot, selectedResumeId, router, onClose]);
 
   // ── Render Helpers ─────────────────────────────────────────
 
@@ -1388,21 +1451,120 @@ export function AtsOptimizationFlow({
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold text-slate-900">
-          Create optimized resume
+          Save optimized resume
         </h3>
         <p className="mt-1 text-sm text-slate-500">
-          Review and confirm to create your ATS-optimized resume
+          Choose how to save your ATS-optimized resume
         </p>
       </div>
 
-      <FormField label="Resume title">
-        <Input
-          value={resumeTitle}
-          onChange={(e) => setResumeTitle(e.target.value)}
-          placeholder="Resume title"
-          maxLength={200}
-        />
-      </FormField>
+      {/* Save mode toggle */}
+      <div className="rounded-xl border border-slate-200 p-1">
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => setSaveMode("new")}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              saveMode === "new"
+                ? "bg-blue-50 text-blue-700"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            Create new resume
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSaveMode("existing");
+              if (existingResumes.length === 0) {
+                loadExistingResumes();
+              }
+            }}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              saveMode === "existing"
+                ? "bg-blue-50 text-blue-700"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            Apply to existing
+          </button>
+        </div>
+      </div>
+
+      {/* New resume form */}
+      {saveMode === "new" && (
+        <FormField label="Resume title">
+          <Input
+            value={resumeTitle}
+            onChange={(e) => setResumeTitle(e.target.value)}
+            placeholder="Resume title"
+            maxLength={200}
+          />
+        </FormField>
+      )}
+
+      {/* Existing resume selector */}
+      {saveMode === "existing" && (
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Replaces the latest saved version. A backup will be created first.
+          </p>
+          {loadingResumes ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+              <span className="ml-2 text-sm text-slate-500">Loading resumes...</span>
+            </div>
+          ) : existingResumes.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+              <p className="text-sm text-slate-500">
+                No existing resumes found. Create a new one instead.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2" role="radiogroup" aria-label="Select existing resume">
+              {existingResumes.map((resume) => (
+                <label
+                  key={resume.id}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
+                    selectedResumeId === resume.id
+                      ? "border-blue-300 bg-blue-50"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="existing-resume"
+                    value={resume.id}
+                    checked={selectedResumeId === resume.id}
+                    onChange={() => setSelectedResumeId(resume.id)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                      selectedResumeId === resume.id
+                        ? "border-blue-500"
+                        : "border-slate-300"
+                    }`}
+                  >
+                    {selectedResumeId === resume.id && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700 truncate">
+                      {resume.title}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {resume.targetRole || "No target role"} · Updated{" "}
+                      {new Date(resume.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Summary of changes */}
       <div className="rounded-xl border border-slate-200 p-4">
@@ -1446,12 +1608,22 @@ export function AtsOptimizationFlow({
           Back
         </Button>
         <Button
-          onClick={handleCreateResume}
-          disabled={loading || !resumeTitle.trim()}
+          onClick={() => {
+            if (saveMode === "existing") {
+              setExistingConfirmOpen(true);
+            } else {
+              handleCreateResume();
+            }
+          }}
+          disabled={
+            loading ||
+            (saveMode === "new" && !resumeTitle.trim()) ||
+            (saveMode === "existing" && !selectedResumeId)
+          }
           loading={loading}
           className="flex-1"
         >
-          Create Resume
+          {saveMode === "existing" ? "Apply to Resume" : "Create Resume"}
         </Button>
       </div>
     </div>
@@ -1556,7 +1728,7 @@ export function AtsOptimizationFlow({
         </div>
       </div>
 
-      {/* Confirmation dialog */}
+      {/* Confirmation dialog — discard changes */}
       <ConfirmDialog
         open={confirmOpen}
         title="Discard changes?"
@@ -1569,6 +1741,23 @@ export function AtsOptimizationFlow({
           onClose();
         }}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      {/* Confirmation dialog — apply to existing resume */}
+      <ConfirmDialog
+        open={existingConfirmOpen}
+        title="Replace existing resume?"
+        description={
+          `This will replace the latest saved version of "${existingResumes.find((r) => r.id === selectedResumeId)?.title || "the selected resume"}" with your optimized content. A backup version will be created first.`
+        }
+        confirmLabel="Apply"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          setExistingConfirmOpen(false);
+          handleApplyExisting();
+        }}
+        onCancel={() => setExistingConfirmOpen(false)}
       />
 
       {/* Toast */}

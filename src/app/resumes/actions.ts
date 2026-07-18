@@ -308,6 +308,89 @@ export async function createResumeWithSnapshotAction(
   return { success: true, resumeId: result.data.id };
 }
 
+// ── Apply ATS optimization to existing resume ────────────────
+// Replaces the latest snapshot on an existing resume with the
+// accepted ATS-optimized snapshot. Creates a backup version
+// before replacement and an ATS Optimized version after.
+
+export type ApplyToExistingResumeResult =
+  | { success: true; resumeId: string }
+  | { success: false; error: string };
+
+export async function applyToExistingResumeAction(
+  resumeId: string,
+  snapshot: ResumeSnapshot,
+): Promise<ApplyToExistingResumeResult> {
+  // 1. Authenticate
+  try {
+    await requireAuthenticatedUser();
+  } catch {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  // 2. Validate resume exists and belongs to user
+  const resumeResult = await getResume(resumeId);
+  if (!resumeResult.success) {
+    return {
+      success: false,
+      error:
+        resumeResult.error.code === "resume_not_found"
+          ? "Resume not found."
+          : "Failed to load resume.",
+    };
+  }
+
+  // 3. Load current snapshot (latest version)
+  const versionsResult = await listVersions(resumeId);
+  if (!versionsResult.success) {
+    return { success: false, error: "Failed to load resume versions." };
+  }
+
+  const versions = versionsResult.data;
+  if (versions.length === 0) {
+    return {
+      success: false,
+      error: "Resume has no versions. Please use Create new instead.",
+    };
+  }
+
+  const latestVersion = versions[0]; // Sorted by created_at DESC
+  const currentSnapshot = latestVersion.snapshot;
+
+  // 4. Create backup version ("Before ATS Optimization")
+  const backupResult = await createVersion(resumeId, currentSnapshot, {
+    label: "Before ATS Optimization",
+  });
+
+  if (!backupResult.success) {
+    return {
+      success: false,
+      error: "Failed to create backup version. Resume unchanged.",
+    };
+  }
+
+  // 5. Apply the new snapshot ("ATS Optimized")
+  const applyResult = await createVersion(resumeId, snapshot, {
+    label: "ATS Optimized",
+  });
+
+  if (!applyResult.success) {
+    // Compensation: the backup was created but the apply failed.
+    // The resume now has an extra "Before ATS Optimization" version.
+    // This is acceptable — the backup preserves the original state.
+    return {
+      success: false,
+      error: "Failed to apply optimization. Resume unchanged.",
+    };
+  }
+
+  // 6. Revalidate
+  revalidatePath("/dashboard");
+  revalidatePath(`/resumes/${resumeId}/edit`);
+
+  return { success: true, resumeId };
+}
+
 // ── Get profile for pre-filling ─────────────────────────────
 
 export async function getProfileAction() {
