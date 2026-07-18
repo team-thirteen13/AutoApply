@@ -1,0 +1,71 @@
+%PDF-1.0
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 2130 >>
+stream
+BT /F1 12 Tf 72 720 Td (Alex Example) Tj ET
+BT /F1 12 Tf 72 702 Td (alex@example.test) Tj ET
+BT /F1 12 Tf 72 684 Td (+1 555-0123) Tj ET
+BT /F1 12 Tf 72 666 Td (https://github.com/alexexample) Tj ET
+BT /F1 12 Tf 72 648 Td (https://linkedin.com/in/alexexample) Tj ET
+BT /F1 12 Tf 72 630 Td () Tj ET
+BT /F1 12 Tf 72 612 Td (Professional Summary) Tj ET
+BT /F1 12 Tf 72 594 Td (Software engineer with 5 years of experience in full-stack development.) Tj ET
+BT /F1 12 Tf 72 576 Td () Tj ET
+BT /F1 12 Tf 72 558 Td (Work Experience) Tj ET
+BT /F1 12 Tf 72 540 Td (Senior Developer at Example Labs) Tj ET
+BT /F1 12 Tf 72 522 Td (January 2022 - March 2024) Tj ET
+BT /F1 12 Tf 72 504 Td (" Led development of microservices platform) Tj ET
+BT /F1 12 Tf 72 486 Td (" Improved API performance by 40%) Tj ET
+BT /F1 12 Tf 72 468 Td () Tj ET
+BT /F1 12 Tf 72 450 Td (Developer at Test Corp) Tj ET
+BT /F1 12 Tf 72 432 Td (June 2019 - December 2021) Tj ET
+BT /F1 12 Tf 72 414 Td (" Built REST APIs using Node.js and Express) Tj ET
+BT /F1 12 Tf 72 396 Td (" Maintained PostgreSQL databases) Tj ET
+BT /F1 12 Tf 72 378 Td () Tj ET
+BT /F1 12 Tf 72 360 Td (Education) Tj ET
+BT /F1 12 Tf 72 342 Td (Bachelor of Computer Science at Example University) Tj ET
+BT /F1 12 Tf 72 324 Td (September 2015 - May 2019) Tj ET
+BT /F1 12 Tf 72 306 Td () Tj ET
+BT /F1 12 Tf 72 288 Td (Technical Skills) Tj ET
+BT /F1 12 Tf 72 270 Td (TypeScript, React, Node.js, PostgreSQL, Docker, AWS) Tj ET
+BT /F1 12 Tf 72 252 Td () Tj ET
+BT /F1 12 Tf 72 234 Td (Certifications) Tj ET
+BT /F1 12 Tf 72 216 Td (AWS Solutions Architect Associate) Tj ET
+BT /F1 12 Tf 72 198 Td (Amazon Web Services) Tj ET
+BT /F1 12 Tf 72 180 Td (2023-06) Tj ET
+BT /F1 12 Tf 72 162 Td () Tj ET
+BT /F1 12 Tf 72 144 Td (Projects) Tj ET
+BT /F1 12 Tf 72 126 Td (Open Source Dashboard) Tj ET
+BT /F1 12 Tf 72 108 Td (Built a real-time analytics dashboard) Tj ET
+BT /F1 12 Tf 72 90 Td (Technologies: React, TypeScript, WebSocket) Tj ET
+BT /F1 12 Tf 72 72 Td () Tj ET
+BT /F1 12 Tf 72 54 Td (Languages) Tj ET
+BT /F1 12 Tf 72 36 Td (English - Native) Tj ET
+BT /F1 12 Tf 72 18 Td (Spanish - Conversational) Tj ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2485
+%%EOF

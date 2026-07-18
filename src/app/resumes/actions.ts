@@ -396,3 +396,104 @@ export async function deleteResumeFileAction(
     data: result.data,
   };
 }
+
+// ─────────────────────────────────────────────────────────────
+// Resume Parsing Actions
+// ─────────────────────────────────────────────────────────────
+// Server actions for parsing uploaded resume documents.
+// Extracts content from PDF/DOCX and returns a normalized
+// ResumeSnapshot draft for review before saving.
+// ─────────────────────────────────────────────────────────────
+
+import { parseResume } from "@/features/resume-parser";
+import type {
+  ResumeParserErrorCode,
+} from "@/features/resume-parser";
+import { requireAuthenticatedUser } from "@/lib/supabase/session";
+import { AuthenticationRequiredError } from "@/types/auth";
+
+export type ParseResumeResult =
+  | { success: true; data: { snapshot: ResumeSnapshot; warnings: string[] } }
+  | { success: false; error: string; code: ResumeParserErrorCode };
+
+/**
+ * Parse an uploaded resume file and return a normalized snapshot.
+ * Does NOT save to database — returns the parsed result for review.
+ * Requires an authenticated user.
+ */
+export async function parseResumeFileAction(
+  file: File,
+): Promise<ParseResumeResult> {
+  try {
+    // Require authentication before any processing
+    await requireAuthenticatedUser();
+
+    // Validate file type
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        success: false,
+        error: "Unsupported file type. Please upload a PDF or DOCX file.",
+        code: "unsupported_file_type",
+      };
+    }
+
+    // Validate file size (10 MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return {
+        success: false,
+        error: "File exceeds the maximum size of 10 MB.",
+        code: "file_too_large",
+      };
+    }
+
+    if (file.size === 0) {
+      return {
+        success: false,
+        error: "File is empty.",
+        code: "empty_document",
+      };
+    }
+
+    // Convert File to Buffer for server-side parsing
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Parse the resume
+    const result = await parseResume(buffer, file.type);
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error.message,
+        code: result.error.code,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        snapshot: result.data,
+        warnings: result.warnings ?? [],
+      },
+    };
+  } catch (error) {
+    if (error instanceof AuthenticationRequiredError) {
+      return {
+        success: false,
+        error: "You must be signed in to parse a resume.",
+        code: "authentication_required",
+      };
+    }
+    return {
+      success: false,
+      error: "An unexpected error occurred while parsing the file.",
+      code: "extraction_failed",
+    };
+  }
+}
