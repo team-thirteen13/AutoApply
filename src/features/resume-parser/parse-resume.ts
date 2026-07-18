@@ -14,25 +14,29 @@ import type {
   NormalizeResult,
 } from "./types";
 import type { ResumeSnapshot } from "@/types/resume";
-import { PdfResumeParser } from "./pdf-parser";
-import { DocxResumeParser } from "./docx-parser";
 
-// ── MIME type to parser mapping ──────────────────────────────
+// ── MIME type constants ──────────────────────────────────────
 
 const PDF_MIME = "application/pdf";
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 /**
- * Get parser for a given MIME type.
- * Creates parser instances lazily for testability.
+ * Get parser for a given MIME type using dynamic imports.
+ * Each parser is only loaded when its MIME type is matched,
+ * preventing pdfjs-dist from being loaded for DOCX files
+ * and avoiding the pdf.worker.mjs resolution error.
  */
-function getParser(mimeType: string): ResumeParser | null {
+async function getParser(mimeType: string): Promise<ResumeParser | null> {
   switch (mimeType) {
-    case PDF_MIME:
+    case PDF_MIME: {
+      const { PdfResumeParser } = await import("./pdf-parser");
       return new PdfResumeParser();
-    case DOCX_MIME:
+    }
+    case DOCX_MIME: {
+      const { DocxResumeParser } = await import("./docx-parser");
       return new DocxResumeParser();
+    }
     default:
       return null;
   }
@@ -52,7 +56,7 @@ export async function parseResume(
   mimeType: string,
 ): Promise<NormalizeResult> {
   // Validate MIME type
-  const parser = getParser(mimeType);
+  const parser = await getParser(mimeType);
   if (!parser) {
     return {
       success: false,
