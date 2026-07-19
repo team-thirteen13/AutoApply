@@ -333,6 +333,22 @@ export class GroqResumeOptimizationProvider
       });
     }
 
+    // Strip unknown fields from all nested objects (Groq json_object
+    // may include extra fields that fail .strict() Zod validation)
+    const PROFILE_KEYS = ["name", "title", "email", "phone", "city", "country", "address", "location", "tagline", "bio", "githubUrl", "linkedinUrl", "portfolioUrl", "photoUrl"];
+    const EXPERIENCE_KEYS = ["id", "company", "title", "employmentType", "location", "startDate", "endDate", "isCurrent", "description", "accomplishments", "skills"];
+    const EDUCATION_KEYS = ["id", "university", "degree", "fieldOfStudy", "location", "startDate", "endDate", "isCurrent", "grade", "description", "achievements"];
+    const PROJECT_KEYS = ["id", "title", "role", "description", "technologies", "url", "liveUrl", "gitUrl", "startDate", "endDate"];
+    const CERTIFICATE_KEYS = ["id", "name", "issuingOrganisation", "url", "credentialId", "startDate", "endDate", "doesNotExpire"];
+    const SKILL_KEYS = ["id", "name", "category", "proficiency"];
+    const LANGUAGE_KEYS = ["id", "name", "proficiency"];
+
+    const stripExtra = (obj: Record<string, unknown>, allowed: string[]) => {
+      for (const key of Object.keys(obj)) {
+        if (!allowed.includes(key)) delete obj[key];
+      }
+    };
+
     // Ensure profile has required fields and remove extra fields
     if (result.optimizedResume && typeof result.optimizedResume === "object") {
       const resume = result.optimizedResume as Record<string, unknown>;
@@ -344,24 +360,57 @@ export class GroqResumeOptimizationProvider
         // Remove extra fields not in schema
         delete profile.linkedin;
         delete profile.github;
-        delete profile.location;
         // Ensure required fields exist with correct types
         if (!profile.title) profile.title = "";
-        if (profile.phone === undefined) profile.phone = null;
-        if (profile.city === undefined) profile.city = null;
-        if (profile.country === undefined) profile.country = null;
-        if (profile.bio === undefined) profile.bio = null;
-        if (profile.githubUrl === undefined) profile.githubUrl = null;
-        if (profile.linkedinUrl === undefined) profile.linkedinUrl = null;
-        if (profile.portfolioUrl === undefined) profile.portfolioUrl = null;
+        // Delete null/undefined optional fields so .strict() doesn't reject them
+        for (const key of ["phone", "city", "country", "bio", "githubUrl", "linkedinUrl", "portfolioUrl", "address", "tagline", "photoUrl"]) {
+          if (profile[key] === null || profile[key] === undefined) delete profile[key];
+        }
+        stripExtra(profile, PROFILE_KEYS);
       }
-      // Ensure arrays exist
+      // Ensure arrays exist and strip extra fields from items
       if (!resume.experiences) resume.experiences = [];
+      if (Array.isArray(resume.experiences)) {
+        resume.experiences = resume.experiences.map((e) => {
+          if (e && typeof e === "object") stripExtra(e as Record<string, unknown>, EXPERIENCE_KEYS);
+          return e;
+        });
+      }
       if (!resume.education) resume.education = [];
+      if (Array.isArray(resume.education)) {
+        resume.education = resume.education.map((e) => {
+          if (e && typeof e === "object") stripExtra(e as Record<string, unknown>, EDUCATION_KEYS);
+          return e;
+        });
+      }
       if (!resume.projects) resume.projects = [];
+      if (Array.isArray(resume.projects)) {
+        resume.projects = resume.projects.map((p) => {
+          if (p && typeof p === "object") stripExtra(p as Record<string, unknown>, PROJECT_KEYS);
+          return p;
+        });
+      }
       if (!resume.certificates) resume.certificates = [];
+      if (Array.isArray(resume.certificates)) {
+        resume.certificates = resume.certificates.map((c) => {
+          if (c && typeof c === "object") stripExtra(c as Record<string, unknown>, CERTIFICATE_KEYS);
+          return c;
+        });
+      }
       if (!resume.skills) resume.skills = [];
+      if (Array.isArray(resume.skills)) {
+        resume.skills = resume.skills.map((s) => {
+          if (s && typeof s === "object") stripExtra(s as Record<string, unknown>, SKILL_KEYS);
+          return s;
+        });
+      }
       if (!resume.languages) resume.languages = [];
+      if (Array.isArray(resume.languages)) {
+        resume.languages = resume.languages.map((l) => {
+          if (l && typeof l === "object") stripExtra(l as Record<string, unknown>, LANGUAGE_KEYS);
+          return l;
+        });
+      }
     }
 
     return result;
