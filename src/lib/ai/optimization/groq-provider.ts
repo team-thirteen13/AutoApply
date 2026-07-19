@@ -269,9 +269,9 @@ export class GroqResumeOptimizationProvider
    *
    * Groq's json_object mode does not enforce a schema, so the model may
    * return structures that differ from the expected format:
-   * - changes: { section, description } instead of { section, field, originalValue, optimizedValue, reason }
+   * - changes: invalid reason enum values, or { section, description } format
    * - warnings: objects with { section, description } instead of plain strings
-   * - profile: may include extra fields or miss required ones
+   * - profile: extra fields (linkedin, github, location) or missing required fields
    */
   private normalizeOutput(parsed: unknown): unknown {
     if (!parsed || typeof parsed !== "object") return parsed;
@@ -294,7 +294,31 @@ export class GroqResumeOptimizationProvider
             reason: "conciseness",
           };
         }
-        return change;
+        // Map invalid reason enum values to valid ones
+        if (c.reason && typeof c.reason === "string") {
+          const validReasons = [
+            "keyword_alignment", "action_verbs", "conciseness",
+            "tense_consistency", "terminology", "readability",
+            "filler_removal", "skill_organization", "summary_relevance",
+            "bullet_clarity",
+          ];
+          if (!validReasons.includes(c.reason)) {
+            // Map common Groq reason patterns to valid enum values
+            const reason = c.reason.toLowerCase();
+            if (reason.includes("keyword") || reason.includes("ats")) c.reason = "keyword_alignment";
+            else if (reason.includes("action") || reason.includes("verb")) c.reason = "action_verbs";
+            else if (reason.includes("concise") || reason.includes("brief")) c.reason = "conciseness";
+            else if (reason.includes("tense")) c.reason = "tense_consistency";
+            else if (reason.includes("terminolog") || reason.includes("align")) c.reason = "terminology";
+            else if (reason.includes("readab") || reason.includes("flow")) c.reason = "readability";
+            else if (reason.includes("filler") || reason.includes("remove")) c.reason = "filler_removal";
+            else if (reason.includes("skill") || reason.includes("organiz")) c.reason = "skill_organization";
+            else if (reason.includes("summary") || reason.includes("relevance")) c.reason = "summary_relevance";
+            else if (reason.includes("bullet") || reason.includes("clarity")) c.reason = "bullet_clarity";
+            else c.reason = "conciseness"; // default fallback
+          }
+        }
+        return c;
       });
     }
 
@@ -309,19 +333,27 @@ export class GroqResumeOptimizationProvider
       });
     }
 
-    // Ensure profile has required fields
+    // Ensure profile has required fields and remove extra fields
     if (result.optimizedResume && typeof result.optimizedResume === "object") {
       const resume = result.optimizedResume as Record<string, unknown>;
       if (resume.profile && typeof resume.profile === "object") {
         const profile = resume.profile as Record<string, unknown>;
+        // Map Groq field names to expected schema field names
+        if (profile.linkedin && !profile.linkedinUrl) profile.linkedinUrl = profile.linkedin;
+        if (profile.github && !profile.githubUrl) profile.githubUrl = profile.github;
+        // Remove extra fields not in schema
+        delete profile.linkedin;
+        delete profile.github;
+        delete profile.location;
+        // Ensure required fields exist with correct types
         if (!profile.title) profile.title = "";
-        if (!profile.phone) profile.phone = null;
-        if (!profile.city) profile.city = null;
-        if (!profile.country) profile.country = null;
-        if (!profile.bio) profile.bio = null;
-        if (!profile.githubUrl) profile.githubUrl = null;
-        if (!profile.linkedinUrl) profile.linkedinUrl = null;
-        if (!profile.portfolioUrl) profile.portfolioUrl = null;
+        if (profile.phone === undefined) profile.phone = null;
+        if (profile.city === undefined) profile.city = null;
+        if (profile.country === undefined) profile.country = null;
+        if (profile.bio === undefined) profile.bio = null;
+        if (profile.githubUrl === undefined) profile.githubUrl = null;
+        if (profile.linkedinUrl === undefined) profile.linkedinUrl = null;
+        if (profile.portfolioUrl === undefined) profile.portfolioUrl = null;
       }
       // Ensure arrays exist
       if (!resume.experiences) resume.experiences = [];
