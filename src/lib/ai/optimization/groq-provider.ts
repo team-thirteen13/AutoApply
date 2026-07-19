@@ -15,7 +15,7 @@ import type {
   ProviderRequestContext,
   ProviderError,
 } from "./types";
-import { SYSTEM_PROMPT, buildUserPrompt, RESPONSE_JSON_SCHEMA } from "../prompts/ats-v1";
+import { SYSTEM_PROMPT, buildUserPrompt } from "../prompts/ats-v1";
 import { validateProviderOutput } from "./validation";
 import { parseRetryAfter } from "./retry-after";
 
@@ -30,8 +30,7 @@ interface GroqChatRequest {
   model: string;
   messages: GroqChatMessage[];
   response_format?: {
-    type: "json_schema";
-    json_schema: typeof RESPONSE_JSON_SCHEMA;
+    type: "json_object";
   };
   max_completion_tokens?: number;
   temperature?: number;
@@ -99,9 +98,11 @@ export class GroqResumeOptimizationProvider
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: buildUserPrompt(request) },
       ],
+      // Groq llama-3.3-70b-versatile supports json_object mode only.
+      // json_schema is not supported by this model (returns HTTP 400).
+      // Runtime Zod validation in parseStructuredOutput enforces the schema.
       response_format: {
-        type: "json_schema",
-        json_schema: RESPONSE_JSON_SCHEMA,
+        type: "json_object",
       },
       temperature: 0.3,
     };
@@ -197,6 +198,13 @@ export class GroqResumeOptimizationProvider
       errorBody.error?.message ?? `HTTP ${response.status}`;
 
     switch (response.status) {
+      case 400:
+        return {
+          code: "invalid_request",
+          message: `Invalid request: ${message}`,
+          providerId: this.id,
+          retryable: false,
+        };
       case 401:
         return {
           code: "provider_authentication_failed",

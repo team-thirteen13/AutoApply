@@ -127,7 +127,7 @@ describe("GroqResumeOptimizationProvider", () => {
       expect(options.headers["Content-Type"]).toBe("application/json");
     });
 
-    it("uses json_schema response format", async () => {
+    it("uses JSON object mode for llama-3.3-70b-versatile", async () => {
       globalThis.fetch = mockFetchSuccess({
         choices: [{ message: { content: '{"optimizedResume":{},"changes":[],"warnings":[]}' } }],
       });
@@ -137,8 +137,9 @@ describe("GroqResumeOptimizationProvider", () => {
 
       const [, options] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
       const body = JSON.parse(options.body);
-      expect(body.response_format.type).toBe("json_schema");
-      expect(body.response_format.json_schema).toBeDefined();
+      expect(body.response_format).toEqual({ type: "json_object" });
+      expect(body.model).toBe("llama-3.3-70b-versatile");
+      expect(body.response_format.json_schema).toBeUndefined();
     });
   });
 
@@ -181,6 +182,45 @@ describe("GroqResumeOptimizationProvider", () => {
   });
 
   describe("HTTP errors", () => {
+    it("returns invalid_request for 400 unsupported response format", async () => {
+      globalThis.fetch = mockFetchError(400, {
+        error: { message: "This model does not support response format `json_schema`" },
+      });
+
+      const provider = createProvider();
+      await expect(provider.optimizeResume(MOCK_REQUEST)).rejects.toMatchObject({
+        code: "invalid_request",
+        retryable: false,
+      });
+    });
+
+    it("returns invalid_request for generic 400", async () => {
+      globalThis.fetch = mockFetchError(400, {
+        error: { message: "Invalid request body" },
+      });
+
+      const provider = createProvider();
+      await expect(provider.optimizeResume(MOCK_REQUEST)).rejects.toMatchObject({
+        code: "invalid_request",
+        retryable: false,
+      });
+    });
+
+    it("does not expose raw Groq 400 message to callers", async () => {
+      globalThis.fetch = mockFetchError(400, {
+        error: { message: "Invalid request: unsupported response_format type" },
+      });
+
+      const provider = createProvider();
+      try {
+        await provider.optimizeResume(MOCK_REQUEST);
+        expect.fail("Should have thrown");
+      } catch (error) {
+        // The internal message is safe (no API key, no request body)
+        expect((error as Error).message).not.toContain("gsk_test_key");
+      }
+    });
+
     it("returns provider_authentication_failed for 401", async () => {
       globalThis.fetch = mockFetchError(401, {
         error: { message: "Invalid API key" },
