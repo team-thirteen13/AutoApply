@@ -281,6 +281,9 @@ export class GroqResumeOptimizationProvider
 
     const validation = validateProviderOutput(parsed);
     if (!validation.valid) {
+      // TEMPORARY: diagnostic logging for json_object mode testing
+      console.error("[GROQ] Schema validation failed:", JSON.stringify(parsed).substring(0, 500));
+      console.error("[GROQ] Validation errors:", JSON.stringify(validation.errors).substring(0, 500));
       throw {
         code: "malformed_provider_output" as const,
         message: "Provider output failed schema validation.",
