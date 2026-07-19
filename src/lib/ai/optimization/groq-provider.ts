@@ -264,6 +264,77 @@ export class GroqResumeOptimizationProvider
     }
   }
 
+  /**
+   * Normalize Groq json_object output to match the expected Zod schema.
+   *
+   * Groq's json_object mode does not enforce a schema, so the model may
+   * return structures that differ from the expected format:
+   * - changes: { section, description } instead of { section, field, originalValue, optimizedValue, reason }
+   * - warnings: objects with { section, description } instead of plain strings
+   * - profile: may include extra fields or miss required ones
+   */
+  private normalizeOutput(parsed: unknown): unknown {
+    if (!parsed || typeof parsed !== "object") return parsed;
+
+    const obj = parsed as Record<string, unknown>;
+    const result: Record<string, unknown> = { ...obj };
+
+    // Normalize changes array
+    if (Array.isArray(result.changes)) {
+      result.changes = result.changes.map((change: unknown) => {
+        if (!change || typeof change !== "object") return change;
+        const c = change as Record<string, unknown>;
+        // If change has `description` but missing `field`/`originalValue`/`optimizedValue`/`reason`
+        if (c.description && !c.field) {
+          return {
+            section: c.section ?? "unknown",
+            field: "summary",
+            originalValue: "",
+            optimizedValue: String(c.description),
+            reason: "conciseness",
+          };
+        }
+        return change;
+      });
+    }
+
+    // Normalize warnings array — objects with { section, description } → strings
+    if (Array.isArray(result.warnings)) {
+      result.warnings = result.warnings.map((w: unknown) => {
+        if (w && typeof w === "object") {
+          const wObj = w as Record<string, unknown>;
+          return String(wObj.description ?? wObj.message ?? JSON.stringify(w));
+        }
+        return w;
+      });
+    }
+
+    // Ensure profile has required fields
+    if (result.optimizedResume && typeof result.optimizedResume === "object") {
+      const resume = result.optimizedResume as Record<string, unknown>;
+      if (resume.profile && typeof resume.profile === "object") {
+        const profile = resume.profile as Record<string, unknown>;
+        if (!profile.title) profile.title = "";
+        if (!profile.phone) profile.phone = null;
+        if (!profile.city) profile.city = null;
+        if (!profile.country) profile.country = null;
+        if (!profile.bio) profile.bio = null;
+        if (!profile.githubUrl) profile.githubUrl = null;
+        if (!profile.linkedinUrl) profile.linkedinUrl = null;
+        if (!profile.portfolioUrl) profile.portfolioUrl = null;
+      }
+      // Ensure arrays exist
+      if (!resume.experiences) resume.experiences = [];
+      if (!resume.education) resume.education = [];
+      if (!resume.projects) resume.projects = [];
+      if (!resume.certificates) resume.certificates = [];
+      if (!resume.skills) resume.skills = [];
+      if (!resume.languages) resume.languages = [];
+    }
+
+    return result;
+  }
+
   private parseStructuredOutput(
     content: string,
   ): OptimizeResumeProviderResult {
@@ -279,11 +350,14 @@ export class GroqResumeOptimizationProvider
       } satisfies ProviderError;
     }
 
-    const validation = validateProviderOutput(parsed);
+    // Normalize Groq json_object output to match the expected schema.
+    // Groq may return changes as { section, description } instead of
+    // { section, field, originalValue, optimizedValue, reason }.
+    // Warnings may be objects instead of strings.
+    const normalized = this.normalizeOutput(parsed);
+
+    const validation = validateProviderOutput(normalized);
     if (!validation.valid) {
-      // TEMPORARY: diagnostic logging for json_object mode testing
-      console.error("[GROQ] Schema validation failed:", JSON.stringify(parsed).substring(0, 500));
-      console.error("[GROQ] Validation errors:", JSON.stringify(validation.errors).substring(0, 500));
       throw {
         code: "malformed_provider_output" as const,
         message: "Provider output failed schema validation.",
