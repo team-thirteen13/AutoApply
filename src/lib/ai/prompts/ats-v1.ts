@@ -88,6 +88,10 @@ export function buildUserPrompt(request: OptimizeResumeRequest): string {
     `\n## INSTRUCTIONS\nOptimize this resume for ATS keyword alignment and professional impact. Rewrite the summary and experience bullet points to be stronger, more concise, and keyword-aligned with the target role. Reorganize skills if beneficial. Preserve ALL factual information exactly. Return the complete optimized ResumeSnapshot as JSON.`,
   );
 
+  sections.push(
+    `\n## REQUIRED OUTPUT FORMAT\nReturn ONLY a valid JSON object with exactly these top-level keys: "optimizedResume", "changes", "warnings".\n\nThe "optimizedResume" object must contain: "profile", "summary", "experiences", "education", "projects", "certificates", "skills", "languages".\n\nThe "changes" array must contain objects with: "section", "field", "originalValue", "optimizedValue", "reason".\n\nThe "warnings" array contains strings.\n\nExample structure:\n{\n  "optimizedResume": {\n    "profile": { "name": "...", "title": "...", "email": "...", "phone": "...", "city": "...", "country": "...", "bio": "...", "githubUrl": "...", "linkedinUrl": "...", "portfolioUrl": "..." },\n    "summary": "...",\n    "experiences": [{ "company": "...", "title": "...", "startDate": "...", "endDate": "...", "isCurrent": false, "description": "...", "accomplishments": ["..."], "skills": ["..."] }],\n    "education": [{ "university": "...", "degree": "...", "fieldOfStudy": "...", "startDate": "...", "endDate": "...", "isCurrent": false, "grade": "...", "description": "..." }],\n    "projects": [{ "title": "...", "description": "...", "technologies": ["..."], "url": "..." }],\n    "certificates": [{ "name": "...", "issuer": "...", "date": "...", "url": "..." }],\n    "skills": [{ "name": "...", "category": "...", "proficiency": "..." }],\n    "languages": [{ "name": "...", "proficiency": "..." }]\n  },\n  "changes": [{ "section": "...", "field": "...", "originalValue": "...", "optimizedValue": "...", "reason": "..." }],\n  "warnings": []\n}`,
+  );
+
   return sections.join("\n");
 }
 
