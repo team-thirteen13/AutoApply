@@ -269,9 +269,11 @@ export class GroqResumeOptimizationProvider
    *
    * Groq's json_object mode does not enforce a schema, so the model may
    * return structures that differ from the expected format:
-   * - changes: invalid reason enum values, or { section, description } format
+   * - changes: invalid reason enum values, empty fields, or { section, description } format
    * - warnings: objects with { section, description } instead of plain strings
-   * - profile: extra fields (linkedin, github, location) or missing required fields
+   * - profile: extra fields (linkedin, github, portfolio) or missing required fields
+   * - projects: name instead of title, extra fields (isCurrent, skills)
+   * - certificates: issuer instead of issuingOrganisation, issueDate/date instead of startDate
    */
   private normalizeOutput(parsed: unknown): unknown {
     if (!parsed || typeof parsed !== "object") return parsed;
@@ -279,31 +281,33 @@ export class GroqResumeOptimizationProvider
     const obj = parsed as Record<string, unknown>;
     const result: Record<string, unknown> = { ...obj };
 
-    // Normalize changes array
+    const VALID_REASONS = [
+      "keyword_alignment", "action_verbs", "conciseness",
+      "tense_consistency", "terminology", "readability",
+      "filler_removal", "skill_organization", "summary_relevance",
+      "bullet_clarity",
+    ];
+
+    // ── Normalize changes array ──────────────────────────────────
     if (Array.isArray(result.changes)) {
-      result.changes = result.changes.map((change: unknown) => {
-        if (!change || typeof change !== "object") return change;
-        const c = change as Record<string, unknown>;
-        // If change has `description` but missing `field`/`originalValue`/`optimizedValue`/`reason`
-        if (c.description && !c.field) {
-          return {
-            section: c.section ?? "unknown",
-            field: "summary",
-            originalValue: "",
-            optimizedValue: String(c.description),
-            reason: "conciseness",
-          };
-        }
-        // Map invalid reason enum values to valid ones
-        if (c.reason && typeof c.reason === "string") {
-          const validReasons = [
-            "keyword_alignment", "action_verbs", "conciseness",
-            "tense_consistency", "terminology", "readability",
-            "filler_removal", "skill_organization", "summary_relevance",
-            "bullet_clarity",
-          ];
-          if (!validReasons.includes(c.reason)) {
-            // Map common Groq reason patterns to valid enum values
+      result.changes = result.changes
+        .map((change: unknown) => {
+          if (!change || typeof change !== "object") return null;
+          const c = change as Record<string, unknown>;
+
+          // If change has `description` but missing `field`, construct a valid entry
+          if (c.description && !c.field) {
+            return {
+              section: c.section ?? "unknown",
+              field: "summary",
+              originalValue: "",
+              optimizedValue: String(c.description),
+              reason: "conciseness",
+            };
+          }
+
+          // Map invalid reason enum values to valid ones
+          if (c.reason && typeof c.reason === "string" && !VALID_REASONS.includes(c.reason)) {
             const reason = c.reason.toLowerCase();
             if (reason.includes("keyword") || reason.includes("ats")) c.reason = "keyword_alignment";
             else if (reason.includes("action") || reason.includes("verb")) c.reason = "action_verbs";
@@ -317,12 +321,24 @@ export class GroqResumeOptimizationProvider
             else if (reason.includes("bullet") || reason.includes("clarity")) c.reason = "bullet_clarity";
             else c.reason = "conciseness"; // default fallback
           }
-        }
-        return c;
-      });
+
+          return c;
+        })
+        // Filter out entries where required fields are still empty after normalization
+        .filter((c: unknown) => {
+          if (!c || typeof c !== "object") return false;
+          const entry = c as Record<string, unknown>;
+          return (
+            typeof entry.field === "string" && entry.field.length > 0 &&
+            typeof entry.section === "string" && entry.section.length > 0 &&
+            typeof entry.originalValue === "string" &&
+            typeof entry.optimizedValue === "string" &&
+            VALID_REASONS.includes(entry.reason as string)
+          );
+        });
     }
 
-    // Normalize warnings array — objects with { section, description } → strings
+    // ── Normalize warnings array ─────────────────────────────────
     if (Array.isArray(result.warnings)) {
       result.warnings = result.warnings.map((w: unknown) => {
         if (w && typeof w === "object") {
@@ -333,35 +349,148 @@ export class GroqResumeOptimizationProvider
       });
     }
 
-    // Ensure profile has required fields and remove extra fields
+    // ── Schema-allowed keys per section ───────────────────────────
+    const PROFILE_KEYS = ["name", "title", "email", "phone", "city", "country", "address", "location", "tagline", "bio", "githubUrl", "linkedinUrl", "portfolioUrl", "photoUrl"];
+    const EXPERIENCE_KEYS = ["id", "company", "title", "employmentType", "location", "startDate", "endDate", "isCurrent", "description", "accomplishments", "skills"];
+    const EDUCATION_KEYS = ["id", "university", "degree", "fieldOfStudy", "location", "startDate", "endDate", "isCurrent", "grade", "description", "achievements"];
+    const PROJECT_KEYS = ["id", "title", "role", "description", "technologies", "url", "liveUrl", "gitUrl", "startDate", "endDate"];
+    const CERTIFICATE_KEYS = ["id", "name", "issuingOrganisation", "url", "credentialId", "startDate", "endDate", "doesNotExpire"];
+    const SKILL_KEYS = ["id", "name", "category", "proficiency"];
+    const LANGUAGE_KEYS = ["id", "name", "proficiency"];
+
+    const stripExtra = (obj: Record<string, unknown>, allowed: string[]) => {
+      for (const key of Object.keys(obj)) {
+        if (!allowed.includes(key)) delete obj[key];
+      }
+    };
+
+    // ── Normalize optimizedResume ─────────────────────────────────
     if (result.optimizedResume && typeof result.optimizedResume === "object") {
       const resume = result.optimizedResume as Record<string, unknown>;
+
+      // ── Profile ────────────────────────────────────────────────
       if (resume.profile && typeof resume.profile === "object") {
         const profile = resume.profile as Record<string, unknown>;
-        // Map Groq field names to expected schema field names
+
+        // Map Groq aliases → schema field names
         if (profile.linkedin && !profile.linkedinUrl) profile.linkedinUrl = profile.linkedin;
         if (profile.github && !profile.githubUrl) profile.githubUrl = profile.github;
-        // Remove extra fields not in schema
+        if (profile.portfolio && !profile.portfolioUrl) profile.portfolioUrl = profile.portfolio;
+
+        // Remove source aliases
         delete profile.linkedin;
         delete profile.github;
-        delete profile.location;
-        // Ensure required fields exist with correct types
+        delete profile.portfolio;
+
+        // Ensure required field exists
         if (!profile.title) profile.title = "";
-        if (profile.phone === undefined) profile.phone = null;
-        if (profile.city === undefined) profile.city = null;
-        if (profile.country === undefined) profile.country = null;
-        if (profile.bio === undefined) profile.bio = null;
-        if (profile.githubUrl === undefined) profile.githubUrl = null;
-        if (profile.linkedinUrl === undefined) profile.linkedinUrl = null;
-        if (profile.portfolioUrl === undefined) profile.portfolioUrl = null;
+
+        // Delete null/undefined/empty-string optional fields so .strict() doesn't reject them
+        for (const key of ["phone", "city", "country", "bio", "githubUrl", "linkedinUrl", "portfolioUrl", "address", "tagline", "photoUrl"]) {
+          if (profile[key] === null || profile[key] === undefined || profile[key] === "") {
+            delete profile[key];
+          }
+        }
+
+        stripExtra(profile, PROFILE_KEYS);
       }
-      // Ensure arrays exist
+
+      // ── Experiences ────────────────────────────────────────────
       if (!resume.experiences) resume.experiences = [];
+      if (Array.isArray(resume.experiences)) {
+        resume.experiences = resume.experiences.map((e) => {
+          if (e && typeof e === "object") stripExtra(e as Record<string, unknown>, EXPERIENCE_KEYS);
+          return e;
+        });
+      }
+
+      // ── Education ──────────────────────────────────────────────
       if (!resume.education) resume.education = [];
+      if (Array.isArray(resume.education)) {
+        resume.education = resume.education.map((e) => {
+          if (e && typeof e === "object") stripExtra(e as Record<string, unknown>, EDUCATION_KEYS);
+          return e;
+        });
+      }
+
+      // ── Projects ───────────────────────────────────────────────
       if (!resume.projects) resume.projects = [];
+      if (Array.isArray(resume.projects)) {
+        resume.projects = resume.projects
+          .map((p) => {
+            if (!p || typeof p !== "object") return p;
+            const proj = p as Record<string, unknown>;
+
+            // Map Groq alias: name → title
+            if (!proj.title && proj.name) proj.title = proj.name;
+            // Remove source alias
+            delete proj.name;
+
+            stripExtra(proj, PROJECT_KEYS);
+
+            return proj;
+          })
+          // Filter out projects missing required `title`
+          .filter((p) => {
+            if (!p || typeof p !== "object") return false;
+            const proj = p as Record<string, unknown>;
+            return typeof proj.title === "string" && proj.title.length > 0;
+          });
+      }
+
+      // ── Certificates ───────────────────────────────────────────
       if (!resume.certificates) resume.certificates = [];
+      if (Array.isArray(resume.certificates)) {
+        resume.certificates = resume.certificates
+          .map((c) => {
+            if (!c || typeof c !== "object") return c;
+            const cert = c as Record<string, unknown>;
+
+            // Map Groq aliases → schema field names
+            if (!cert.issuingOrganisation && cert.issuer) cert.issuingOrganisation = cert.issuer;
+            delete cert.issuer;
+
+            if (!cert.startDate && (cert.issueDate || cert.date)) {
+              cert.startDate = cert.issueDate ?? cert.date;
+            }
+            delete cert.issueDate;
+            delete cert.date;
+
+            if (!cert.endDate && cert.expirationDate) cert.endDate = cert.expirationDate;
+            delete cert.expirationDate;
+
+            stripExtra(cert, CERTIFICATE_KEYS);
+
+            return cert;
+          })
+          // Filter out certificates missing required `name` or `startDate`
+          .filter((c) => {
+            if (!c || typeof c !== "object") return false;
+            const cert = c as Record<string, unknown>;
+            return (
+              typeof cert.name === "string" && cert.name.length > 0 &&
+              typeof cert.startDate === "string" && cert.startDate.length > 0
+            );
+          });
+      }
+
+      // ── Skills ─────────────────────────────────────────────────
       if (!resume.skills) resume.skills = [];
+      if (Array.isArray(resume.skills)) {
+        resume.skills = resume.skills.map((s) => {
+          if (s && typeof s === "object") stripExtra(s as Record<string, unknown>, SKILL_KEYS);
+          return s;
+        });
+      }
+
+      // ── Languages ──────────────────────────────────────────────
       if (!resume.languages) resume.languages = [];
+      if (Array.isArray(resume.languages)) {
+        resume.languages = resume.languages.map((l) => {
+          if (l && typeof l === "object") stripExtra(l as Record<string, unknown>, LANGUAGE_KEYS);
+          return l;
+        });
+      }
     }
 
     return result;

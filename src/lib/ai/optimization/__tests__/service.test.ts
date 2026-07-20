@@ -233,4 +233,75 @@ describe("optimizeResume service", () => {
       }
     });
   });
+
+  describe("error code preservation", () => {
+    it("preserves malformed_provider_output code from thrown ProviderError", async () => {
+      const failingProvider: ResumeOptimizationProvider = {
+        id: "groq",
+        optimizeResume: vi.fn().mockRejectedValue({
+          code: "malformed_provider_output",
+          message: "Provider output failed schema validation.",
+          providerId: "groq",
+          retryable: false,
+        } as ProviderError),
+      };
+
+      const deps = createService(failingProvider);
+      const result = await optimizeResume(deps, {
+        resume: SOURCE_RESUME,
+        optimizationMode: "ats",
+        promptVersion: "ats-v1",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("malformed_provider_output");
+      }
+    });
+
+    it("preserves invalid_request code from thrown ProviderError", async () => {
+      const failingProvider: ResumeOptimizationProvider = {
+        id: "groq",
+        optimizeResume: vi.fn().mockRejectedValue({
+          code: "invalid_request",
+          message: "Invalid request: bad body",
+          providerId: "groq",
+          retryable: false,
+        } as ProviderError),
+      };
+
+      const deps = createService(failingProvider);
+      const result = await optimizeResume(deps, {
+        resume: SOURCE_RESUME,
+        optimizationMode: "ats",
+        promptVersion: "ats-v1",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("invalid_request");
+      }
+    });
+
+    it("maps unknown thrown Error to unknown_provider_error", async () => {
+      const failingProvider: ResumeOptimizationProvider = {
+        id: "groq",
+        optimizeResume: vi.fn().mockRejectedValue(
+          new Error("Something completely unexpected"),
+        ),
+      };
+
+      const deps = createService(failingProvider);
+      const result = await optimizeResume(deps, {
+        resume: SOURCE_RESUME,
+        optimizationMode: "ats",
+        promptVersion: "ats-v1",
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe("unknown_provider_error");
+      }
+    });
+  });
 });
