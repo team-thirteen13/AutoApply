@@ -367,4 +367,256 @@ describe("GroqResumeOptimizationProvider", () => {
       }
     });
   });
+
+  describe("output normalization", () => {
+    it("maps profile portfolio to portfolioUrl", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev", portfolio: "https://jane.dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [],
+          certificates: [],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.profile?.portfolioUrl).toBe("https://jane.dev");
+        expect((result.optimizedResume.profile as Record<string, unknown>)?.portfolio).toBeUndefined();
+      }
+    });
+
+    it("removes empty optional profile URLs", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev", portfolio: "", linkedin: "" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [],
+          certificates: [],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const profile = result.optimizedResume.profile as Record<string, unknown>;
+        expect(profile.portfolioUrl).toBeUndefined();
+        expect(profile.linkedinUrl).toBeUndefined();
+        expect(profile.portfolio).toBeUndefined();
+        expect(profile.linkedin).toBeUndefined();
+      }
+    });
+
+    it("maps project name to title", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [{ name: "My Project", description: "A cool project", technologies: ["React"] }],
+          certificates: [],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.projects).toHaveLength(1);
+        expect(result.optimizedResume.projects?.[0].title).toBe("My Project");
+      }
+    });
+
+    it("removes unsupported project keys", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [{ title: "Project", isCurrent: true, skills: ["React"], name: "Alias" }],
+          certificates: [],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const proj = result.optimizedResume.projects?.[0] as Record<string, unknown>;
+        expect(proj.title).toBe("Project");
+        expect(proj.isCurrent).toBeUndefined();
+        expect(proj.skills).toBeUndefined();
+        expect(proj.name).toBeUndefined();
+      }
+    });
+
+    it("maps certificate issuer to issuingOrganisation", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [],
+          certificates: [{ name: "AWS CCP", issuer: "Amazon", issueDate: "2023-01" }],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.certificates).toHaveLength(1);
+        expect(result.optimizedResume.certificates?.[0].issuingOrganisation).toBe("Amazon");
+        expect(result.optimizedResume.certificates?.[0].startDate).toBe("2023-01");
+      }
+    });
+
+    it("maps certificate date to startDate", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [],
+          certificates: [{ name: "Cert", date: "2023-06" }],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.certificates?.[0].startDate).toBe("2023-06");
+      }
+    });
+
+    it("maps certificate expirationDate to endDate", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [],
+          certificates: [{ name: "Cert", startDate: "2023-01", expirationDate: "2025-01" }],
+          skills: [],
+          languages: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.certificates?.[0].endDate).toBe("2025-01");
+      }
+    });
+
+    it("filters malformed changes with empty field", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Jane", title: "Dev" },
+          summary: "test",
+          experiences: [],
+          education: [],
+          projects: [],
+          certificates: [],
+          skills: [],
+          languages: [],
+        },
+        changes: [
+          { section: "summary", field: "summary", originalValue: "old", optimizedValue: "new", reason: "conciseness" },
+          { section: "summary", field: "", originalValue: "old", optimizedValue: "new", reason: "conciseness" },
+          { section: "", field: "summary", originalValue: "old", optimizedValue: "new", reason: "conciseness" },
+        ],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        // Only the first change should survive (valid field and section)
+        expect(result.changes).toHaveLength(1);
+        expect(result.changes[0].field).toBe("summary");
+      }
+    });
+  });
 });
