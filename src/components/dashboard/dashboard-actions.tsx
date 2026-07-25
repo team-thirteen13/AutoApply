@@ -28,6 +28,7 @@ export function DashboardActions() {
           Create New Resume
         </Link>
         <button
+          type="button"
           ref={optimizeButtonRef}
           onClick={() => setAtsFlowOpen(true)}
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors shadow-sm"
