@@ -45,8 +45,6 @@ body {
   }
 
   /* Hide all application chrome when printing */
-  header,
-  nav,
   .print\:hidden {
     display: none !important;
   }

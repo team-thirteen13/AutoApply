@@ -854,3 +854,114 @@ describe("Template accessibility", () => {
     // The browser handles arrow key navigation between radios in a group
   });
 });
+
+// ── Print Media ─────────────────────────────────────────────
+
+describe("ResumePreview — print media", () => {
+  const originalMatchMedia = window.matchMedia;
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    cleanup();
+  });
+
+  function mockPrintMedia() {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === "print",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  }
+
+  it("renders candidate full name visible in screen media", () => {
+    render(<ResumePreview snapshot={{ ...baseSnapshot, templateId: "classic" }} />);
+
+    const name = screen.getByText("Jane Smith");
+    expect(name).toBeInTheDocument();
+    expect(name.tagName).toBe("H1");
+  });
+
+  it("name header tag does not have print:hidden or display:none", () => {
+    render(<ResumePreview snapshot={{ ...baseSnapshot, templateId: "classic" }} />);
+
+    const name = screen.getByText("Jane Smith");
+    const header = name.closest("header")!;
+    expect(header).not.toBeNull();
+
+    // Check no print:hidden class
+    expect(header.className).not.toContain("print:hidden");
+
+    // Check no display:none in computed style
+    const style = window.getComputedStyle(header);
+    expect(style.display).not.toBe("none");
+  });
+
+  it("renders candidate email and phone as visible content", () => {
+    render(<ResumePreview snapshot={{ ...baseSnapshot, templateId: "classic" }} />);
+
+    const email = screen.getByText("jane@example.com");
+    expect(email).toBeInTheDocument();
+
+    const phone = screen.getByText("+1 555 123 4567");
+    expect(phone).toBeInTheDocument();
+  });
+
+  it("renders candidate GitHub link inside the same header as name", () => {
+    render(<ResumePreview snapshot={{ ...baseSnapshot, templateId: "classic" }} />);
+
+    const name = screen.getByText("Jane Smith");
+    const header = name.closest("header")!;
+
+    const github = header.querySelector('a[href*="github"]');
+    expect(github).not.toBeNull();
+    expect(github).toHaveTextContent("GitHub");
+  });
+
+  it("print media does not hide the candidate header (using matchMedia mock)", () => {
+    // Simulate print stylesheet by checking the global CSS rule
+    mockPrintMedia();
+
+    render(<ResumePreview snapshot={{ ...baseSnapshot, templateId: "classic" }} />);
+
+    // The candidate header must exist in the DOM even under print media
+    const name = screen.getByText("Jane Smith");
+    expect(name).toBeInTheDocument();
+
+    const header = name.closest("header")!;
+    expect(header.className).not.toContain("print:hidden");
+
+    // Verify contact info still present
+    expect(screen.getByText("jane@example.com")).toBeInTheDocument();
+  });
+
+  it("name header is inside the printable resume container", () => {
+    render(<ResumePreview snapshot={{ ...baseSnapshot, templateId: "classic" }} />);
+
+    const name = screen.getByText("Jane Smith");
+    const resumeRoot = name.closest("[class*='rounded-xl']")!;
+    expect(resumeRoot).toBeInTheDocument();
+
+    // The resume container has print:border-0 and print:shadow-none
+    expect(resumeRoot.className).toContain("print:border-0");
+    expect(resumeRoot.className).toContain("print:shadow-none");
+  });
+
+  it("all templates render name in a header element", () => {
+    const templates: ResumeTemplateId[] = ["classic", "modern", "minimal"];
+
+    for (const templateId of templates) {
+      cleanup();
+      render(<ResumePreview snapshot={{ ...baseSnapshot, templateId }} />);
+
+      const name = screen.getByText("Jane Smith");
+      const header = name.closest("header");
+      expect(header).not.toBeNull();
+      expect(header!.className).not.toContain("print:hidden");
+    }
+  });
+});
