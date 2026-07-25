@@ -280,4 +280,118 @@ describe("parseResumeFileAction", () => {
       expect(result.data.warnings).toContain("Some formatting was lost");
     }
   });
+
+  // ── Diagnostic logging ────────────────────────────────────
+
+  it("returns extraction_failed when parser throws an unexpected error", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const file = makePdfFixtureFile();
+    mockParseResume.mockRejectedValue(new Error("Unexpected parser crash"));
+
+    const result = await parseResumeFileAction(file);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.code).toBe("extraction_failed");
+      expect(result.error).not.toContain("Unexpected parser crash");
+    }
+    consoleSpy.mockRestore();
+  });
+
+  it("console.error receives structured safe diagnostic on failure", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const file = makePdfFixtureFile();
+    mockParseResume.mockRejectedValue(
+      Object.assign(new Error("PdfJs worker error"), {
+        code: "WORKER_FAILURE",
+        cause: new Error("worker crashed"),
+      }),
+    );
+
+    await parseResumeFileAction(file);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "parseResumeFileAction failed",
+      expect.stringContaining("traceId"),
+    );
+
+    const logged = JSON.parse(consoleSpy.mock.calls[0][1]);
+    expect(logged).toMatchObject({
+      stage: "action_error",
+      name: "Error",
+      message: "PdfJs worker error",
+      errorCode: "WORKER_FAILURE",
+      causeName: "Error",
+      causeMessage: "worker crashed",
+    });
+    expect(logged.traceId).toBeDefined();
+    expect(logged.traceId).toHaveLength(8);
+    expect(logged.stack).toBeDefined();
+    // Safe metadata only
+    expect(logged.ext).toBe("pdf");
+    expect(logged.mime).toBe("application/pdf");
+    expect(typeof logged.size).toBe("number");
+    // No resume content
+    expect(logged).not.toHaveProperty("content");
+    expect(logged).not.toHaveProperty("data");
+    expect(logged).not.toHaveProperty("fileContent");
+    consoleSpy.mockRestore();
+  });
+
+  it("no resume content is logged via console.log markers", async () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const file = makePdfFixtureFile();
+
+    await parseResumeFileAction(file);
+
+    // Only inspect calls that match our diagnostic format (JSON payloads)
+    for (const [, payload] of consoleSpy.mock.calls) {
+      if (typeof payload !== "string") continue;
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(payload);
+      } catch {
+        continue; // skip non-JSON calls (Next.js internals)
+      }
+      if (!parsed.traceId && !parsed.stage) continue; // not ours
+
+      expect(parsed).toHaveProperty("traceId");
+      expect(parsed).toHaveProperty("stage");
+      // No resume content in any marker
+      expect(parsed).not.toHaveProperty("content");
+      expect(parsed).not.toHaveProperty("data");
+      expect(parsed).not.toHaveProperty("fileContent");
+      expect(parsed).not.toHaveProperty("snapshot");
+    }
+    consoleSpy.mockRestore();
+  });
+
+  it("console.error diagnostic traces failStage for parser crash", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const file = makePdfFixtureFile();
+    mockParseResume.mockRejectedValue(new Error("Parser crash"));
+
+    await parseResumeFileAction(file);
+
+    const logged = JSON.parse(consoleSpy.mock.calls[0][1]);
+    expect(logged.failStage).toBe("parser.dynamic_import_or_extraction");
+    consoleSpy.mockRestore();
+  });
+
+  it("auth error returns authentication_required not extraction_failed", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockRequireAuthenticatedUser.mockRejectedValue(
+      new AuthenticationRequiredError(),
+    );
+
+    const file = makePdfFixtureFile();
+    const result = await parseResumeFileAction(file);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.code).toBe("authentication_required");
+    }
+    expect(consoleSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
 });
