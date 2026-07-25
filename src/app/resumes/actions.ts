@@ -21,6 +21,27 @@ import type {
 } from "@/features/ai/generate-resume-content";
 import type { ResumeSnapshot, ResumeOperationResult, ResumeVersion } from "@/types/resume";
 
+// ── Safe diagnostic logging ──────────────────────────────────
+// Structured JSON logging for production diagnostics.
+// Only safe metadata (ext, mime, size) — never resume content,
+// user data, or auth tokens.
+
+interface DiagEntry {
+  traceId: string;
+  stage: string;
+  [key: string]: unknown;
+}
+
+function logDiag(traceId: string, stage: string, extra?: Record<string, unknown>): void {
+  const entry: DiagEntry = { traceId, stage, ts: Date.now() };
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      entry[k] = v;
+    }
+  }
+  console.log(JSON.stringify(entry));
+}
+
 // ─────────────────────────────────────────────────────────────
 // Resume Actions
 // ─────────────────────────────────────────────────────────────
@@ -504,15 +525,28 @@ export type ParseResumeResult =
  * Parse an uploaded resume file and return a normalized snapshot.
  * Does NOT save to database — returns the parsed result for review.
  * Requires an authenticated user.
+ *
+ * Production-safe diagnostic logging: stage markers logged on success
+ * paths and structured error diagnostics on failure. No resume content,
+ * user data, or auth tokens are ever included.
  */
 export async function parseResumeFileAction(
   file: File,
 ): Promise<ParseResumeResult> {
-  try {
-    // Require authentication before any processing
-    await requireAuthenticatedUser();
+  const traceId = crypto.randomUUID().slice(0, 8);
+  let failStage: string | undefined;
 
-    // Validate file type
+  try {
+    // ── Authentication ──────────────────────────────────────
+    failStage = "auth";
+    await requireAuthenticatedUser();
+    logDiag(traceId, "auth_success", {
+      ext: file?.name?.split(".").pop(),
+      mime: file?.type,
+      size: file?.size,
+    });
+
+    // ── File type validation ────────────────────────────────
     const allowedTypes = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -526,7 +560,7 @@ export async function parseResumeFileAction(
       };
     }
 
-    // Validate file size (10 MB limit)
+    // ── File size validation ────────────────────────────────
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return {
@@ -544,12 +578,21 @@ export async function parseResumeFileAction(
       };
     }
 
-    // Convert File to Buffer for server-side parsing
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    logDiag(traceId, "file_received");
 
-    // Parse the resume
+    // ── Convert File to Buffer ──────────────────────────────
+    failStage = "file.arrayBuffer";
+    const arrayBuffer = await file.arrayBuffer();
+    logDiag(traceId, "file_array_buffer_success");
+
+    failStage = "Buffer.from";
+    const buffer = Buffer.from(arrayBuffer);
+    logDiag(traceId, "buffer_from_success");
+
+    // ── Parse the resume (dynamic import inside) ────────────
+    failStage = "parser.dynamic_import_or_extraction";
     const result = await parseResume(buffer, file.type);
+    logDiag(traceId, "parser_extract_success");
 
     if (!result.success) {
       return {
@@ -558,6 +601,8 @@ export async function parseResumeFileAction(
         code: result.error.code,
       };
     }
+
+    logDiag(traceId, "action_success");
 
     return {
       success: true,
@@ -574,6 +619,51 @@ export async function parseResumeFileAction(
         code: "authentication_required",
       };
     }
+
+    // ── Safe diagnostic — no resume content or user data ────
+    const diag: Record<string, unknown> = {
+      traceId,
+      stage: "action_error",
+    };
+
+    if (failStage) {
+      diag.failStage = failStage;
+    }
+
+    if (error instanceof Error) {
+      diag.name = error.name;
+      diag.message = error.message;
+      if ("code" in error) {
+        diag.errorCode = (error as Record<string, unknown>).code;
+      }
+      if (error.cause instanceof Error) {
+        diag.causeName = error.cause.name;
+        diag.causeMessage = error.cause.message;
+      }
+      diag.stack = error.stack;
+    } else {
+      diag.type = typeof error;
+      diag.raw = String(error);
+    }
+
+    // Safe file metadata (ext, mime, size only)
+    try {
+      diag.ext = file.name.split(".").pop();
+      diag.mime = file.type;
+      diag.size = file.size;
+    } catch {
+      // file object may be out of scope or invalid
+    }
+
+    // Safe runtime metadata
+    try {
+      diag.runtime = `node ${process.version} ${process.platform}`;
+    } catch {
+      // process may not be available in all runtimes
+    }
+
+    console.error("parseResumeFileAction failed", JSON.stringify(diag));
+
     return {
       success: false,
       error: "An unexpected error occurred while parsing the file.",
