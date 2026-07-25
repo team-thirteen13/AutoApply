@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Wand2 } from "lucide-react";
 import { createResumeAction } from "@/app/resumes/actions";
+import { AtsOptimizationFlow } from "@/components/ai/ats-optimization";
 
 // ─────────────────────────────────────────────────────────────
 // Create New Resume Page
@@ -14,6 +15,8 @@ import { createResumeAction } from "@/app/resumes/actions";
 export default function NewResumePage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [atsFlowOpen, setAtsFlowOpen] = useState(false);
+  const optimizeButtonRef = useRef<HTMLButtonElement>(null);
 
   const [title, setTitle] = useState("");
   const [targetRole, setTargetRole] = useState("");
@@ -166,23 +169,23 @@ export default function NewResumePage() {
               </div>
             </div>
             <button
+              ref={optimizeButtonRef}
               type="button"
-              disabled
-              aria-describedby="new-resume-optimize-description"
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-medium text-slate-400 cursor-not-allowed shadow-sm"
+              onClick={() => setAtsFlowOpen(true)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors shadow-sm"
             >
               <Wand2 className="h-4 w-4" />
               Optimize CV with AI
-              <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                Coming soon
-              </span>
             </button>
-            <span id="new-resume-optimize-description" className="sr-only">
-              Upload an existing CV and improve it with AI. Coming soon.
-            </span>
           </div>
         </div>
       </div>
+
+      <AtsOptimizationFlow
+        open={atsFlowOpen}
+        onClose={() => setAtsFlowOpen(false)}
+        triggerRef={optimizeButtonRef}
+      />
     </div>
   );
 }

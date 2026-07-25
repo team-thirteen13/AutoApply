@@ -28,7 +28,12 @@ const nextConfig: NextConfig = {
       ],
     },
   ],
-  devIndicators: false,  
+  // ── Server external packages ──────────────────────────────
+  // pdfjs-dist requires its worker file at runtime. Turbopack's
+  // bundling breaks the worker resolution. Externalize these
+  // packages so they load from node_modules at runtime.
+  serverExternalPackages: ["pdfjs-dist", "pdf-parse"],
+  devIndicators: false,
 };
 
 export default nextConfig;

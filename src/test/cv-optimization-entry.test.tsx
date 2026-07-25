@@ -28,6 +28,46 @@ vi.mock("lucide-react", () => ({
   Sparkles: () => <span data-testid="sparkles-icon" />,
   Wand2: () => <span data-testid="wand2-icon" />,
   FilePlus2: () => <span data-testid="file-plus-icon" />,
+  Upload: () => <span data-testid="upload-icon" />,
+  FileText: () => <span data-testid="file-text-icon" />,
+  Loader2: () => <span data-testid="loader-icon" />,
+  Check: () => <span data-testid="check-icon" />,
+  AlertCircle: () => <span data-testid="alert-icon" />,
+  ChevronLeft: () => <span data-testid="chevron-left-icon" />,
+  ChevronRight: () => <span data-testid="chevron-right-icon" />,
+  RotateCcw: () => <span data-testid="rotate-icon" />,
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/use-focus-trap", () => ({
+  useFocusTrap: () => ({ current: null }),
+}));
+
+vi.mock("@/features/ats-optimization", () => ({
+  optimizeResumeAction: vi.fn(),
+  checkOptimizationAvailability: vi.fn().mockResolvedValue({ available: true }),
+}));
+
+vi.mock("@/app/resumes/actions", () => ({
+  parseResumeFileAction: vi.fn(),
+  createResumeWithSnapshotAction: vi.fn(),
+}));
+
+vi.mock("@/lib/skills-normalize", () => ({
+  normalizeSnapshotSkills: (s: unknown) => s,
+}));
+
+vi.mock("@/lib/templates", () => ({
+  normalizeSnapshotTemplate: (s: unknown) => s,
+}));
+
+vi.mock("@/lib/date-normalize", () => ({
+  normalizeSnapshotDates: (s: unknown) => s,
 }));
 
 // ── Import after mocks ─────────────────────────────────────
@@ -57,29 +97,10 @@ describe("Dashboard Actions", () => {
     expect(screen.queryByText("Generate with AI")).not.toBeInTheDocument();
   });
 
-  it("Optimize CV with AI button is disabled", () => {
+  it("Optimize CV with AI button is enabled", () => {
     render(<DashboardActions />);
     const optimizeButton = screen.getByText("Optimize CV with AI").closest("button");
-    expect(optimizeButton).toBeDisabled();
-  });
-
-  it("Optimize CV with AI button has Coming soon badge", () => {
-    render(<DashboardActions />);
-    expect(screen.getByText("Coming soon")).toBeInTheDocument();
-  });
-
-  it("Optimize CV with AI button has accessible description", () => {
-    render(<DashboardActions />);
-    const optimizeButton = screen.getByText("Optimize CV with AI").closest("button");
-    expect(optimizeButton).toHaveAttribute("aria-describedby", "optimize-cv-description");
-  });
-
-  it("accessible description contains coming soon message", () => {
-    render(<DashboardActions />);
-    const description = document.getElementById("optimize-cv-description");
-    expect(description).toBeInTheDocument();
-    expect(description?.textContent).toContain("Upload an existing CV and improve it with AI");
-    expect(description?.textContent).toContain("Coming soon");
+    expect(optimizeButton).not.toBeDisabled();
   });
 
   it("Create New Resume links to /resumes/new", () => {
@@ -105,15 +126,10 @@ describe("Empty Resume State", () => {
     expect(screen.queryByText("Generate with AI")).not.toBeInTheDocument();
   });
 
-  it("Optimize CV with AI button is disabled", () => {
+  it("Optimize CV with AI button is enabled", () => {
     render(<EmptyResumeState />);
     const optimizeButton = screen.getByText("Optimize CV with AI").closest("button");
-    expect(optimizeButton).toBeDisabled();
-  });
-
-  it("Optimize CV with AI button has Coming soon badge", () => {
-    render(<EmptyResumeState />);
-    expect(screen.getByText("Coming soon")).toBeInTheDocument();
+    expect(optimizeButton).not.toBeDisabled();
   });
 
   it("Create Resume links to /resumes/new", () => {

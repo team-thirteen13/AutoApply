@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { SkipToContent } from "@/components/landing/skip-to-content";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -34,6 +35,7 @@ export default function RootLayout({
         <main id="main-content" tabIndex={-1} className="flex-1">
           {children}
         </main>
+        <Analytics />
       </body>
     </html>
   );

@@ -27,6 +27,29 @@ const mockCreateResumeAction = vi.fn();
 vi.mock("@/app/resumes/actions", () => ({
   createResumeAction: (...args: unknown[]) => mockCreateResumeAction(...args),
   listVersionsAction: vi.fn().mockResolvedValue({ success: true, data: [] }),
+  parseResumeFileAction: vi.fn(),
+  createResumeWithSnapshotAction: vi.fn(),
+}));
+
+vi.mock("@/hooks/use-focus-trap", () => ({
+  useFocusTrap: () => ({ current: null }),
+}));
+
+vi.mock("@/features/ats-optimization", () => ({
+  optimizeResumeAction: vi.fn(),
+  checkOptimizationAvailability: vi.fn().mockResolvedValue({ available: true }),
+}));
+
+vi.mock("@/lib/skills-normalize", () => ({
+  normalizeSnapshotSkills: (s: unknown) => s,
+}));
+
+vi.mock("@/lib/templates", () => ({
+  normalizeSnapshotTemplate: (s: unknown) => s,
+}));
+
+vi.mock("@/lib/date-normalize", () => ({
+  normalizeSnapshotDates: (s: unknown) => s,
 }));
 
 // ── Import after mocks ─────────────────────────────────────
