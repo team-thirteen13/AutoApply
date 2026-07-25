@@ -13,6 +13,8 @@ import type { ResumeSnapshot } from "@/types/resume";
 import type {
   OptimizeResumeRequest,
   OptimizeResumeOperationResult,
+  ProviderError,
+  ProviderErrorCode,
 } from "./types";
 import {
   validateFactualPreservation,
@@ -22,6 +24,39 @@ import {
   ProviderManager,
   type ProviderManagerOutcome,
 } from "./provider-manager";
+
+// ── Type Guards ──────────────────────────────────────────────
+
+const SAFE_PROVIDER_ERROR_CODES: ReadonlySet<string> = new Set<ProviderErrorCode>([
+  "invalid_request",
+  "timeout",
+  "rate_limited",
+  "provider_unavailable",
+  "provider_authentication_failed",
+  "unsupported_model",
+  "malformed_provider_output",
+  "factual_validation_failed",
+  "all_providers_failed",
+  "configuration_error",
+  "authentication_required",
+  "unknown_provider_error",
+]);
+
+/**
+ * Type guard that checks if a thrown value is a known ProviderError
+ * with a safe, recognized error code.
+ */
+function isKnownProviderError(
+  error: unknown,
+): error is ProviderError {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof (error as Record<string, unknown>).code === "string" &&
+    SAFE_PROVIDER_ERROR_CODES.has((error as Record<string, unknown>).code as string)
+  );
+}
 
 // ── Input Validation ─────────────────────────────────────────
 
@@ -118,7 +153,19 @@ export async function optimizeResume(
   let outcome: ProviderManagerOutcome;
   try {
     outcome = await deps.providerManager.optimize(request);
-  } catch {
+  } catch (error) {
+    // Preserve known ProviderError codes so the UI shows the correct
+    // safe message (e.g. malformed_provider_output, invalid_request).
+    if (isKnownProviderError(error)) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: mapErrorMessage(error),
+        },
+      };
+    }
+    // Truly unknown exceptions → safe fallback
     return {
       success: false,
       error: {
@@ -129,11 +176,18 @@ export async function optimizeResume(
   }
 
   if (!outcome.success) {
+    // If the error code is not a recognized ProviderErrorCode, treat it
+    // as unknown — this handles cases where the provider manager catches
+    // a non-ProviderError exception and passes it through with code: undefined.
+    const code = SAFE_PROVIDER_ERROR_CODES.has(outcome.error.code)
+      ? (outcome.error.code as ProviderErrorCode)
+      : "unknown_provider_error";
+
     return {
       success: false,
       error: {
-        code: outcome.error.code,
-        message: mapErrorMessage(outcome.error),
+        code,
+        message: mapErrorMessage({ ...outcome.error, code }),
       },
     };
   }
