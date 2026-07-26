@@ -110,15 +110,11 @@ export default function PreviewPage() {
               Print / Save as PDF
             </button>
             <button
-              disabled
-              aria-label="PDF download coming soon"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
               <Download className="h-4 w-4" />
-              PDF
-              <span aria-hidden="true" className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-400">
-                Soon
-              </span>
+              Download PDF
             </button>
           </div>
         </div>
