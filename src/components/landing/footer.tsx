@@ -9,20 +9,20 @@ import Link from "next/link";
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "/#" },
-    { label: "Pricing", href: "/#" },
+    { label: "Features", href: "/pricing" },
+    { label: "Pricing", href: "/pricing" },
   ],
   resources: [
-    { label: "Blog", href: "/#" },
-    { label: "Help Center", href: "/#" },
+    { label: "Blog", href: "/blog" },
+    { label: "Help Center", href: "/help" },
   ],
   company: [
-    { label: "About", href: "/#" },
-    { label: "Contact", href: "/#" },
+    { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
   ],
   legal: [
-    { label: "Privacy Policy", href: "/#" },
-    { label: "Terms of Service", href: "/#" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
   ],
 } as const;
 

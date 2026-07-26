@@ -219,7 +219,7 @@ describe("Landing page uses light theme", () => {
     const fs = await import("fs");
     const path = await import("path");
     const content = fs.readFileSync(
-      path.resolve("src/app/page.tsx"),
+      path.resolve("src/components/landing/landing-layout.tsx"),
       "utf-8",
     );
     expect(content).not.toContain("dark:bg-zinc-950");
@@ -229,29 +229,29 @@ describe("Landing page uses light theme", () => {
     const fs = await import("fs");
     const path = await import("path");
     const content = fs.readFileSync(
-      path.resolve("src/app/page.tsx"),
+      path.resolve("src/components/landing/hero.tsx"),
       "utf-8",
     );
-    expect(content).toContain("from-slate-50");
-    expect(content).toContain("via-blue-50");
-    expect(content).toContain("to-violet-50");
+    expect(content).toContain("bg-gradient-to-br");
+    expect(content).toContain("from-hero-start");
+    expect(content).toContain("to-hero-end");
   });
 
   it("renders ApplyAI branding", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const content = fs.readFileSync(
-      path.resolve("src/app/page.tsx"),
+      path.resolve("src/components/landing/navbar.tsx"),
       "utf-8",
     );
-    expect(content).toContain("ApplyAI");
+    expect(content).toContain("AutoApply");
   });
 
   it("has register and login links for unauthenticated users", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const content = fs.readFileSync(
-      path.resolve("src/app/page.tsx"),
+      path.resolve("src/components/landing/navbar.tsx"),
       "utf-8",
     );
     expect(content).toContain('href="/register"');
