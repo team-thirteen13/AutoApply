@@ -619,4 +619,131 @@ describe("GroqResumeOptimizationProvider", () => {
       }
     });
   });
+
+  describe("normalize null optional profile fields", () => {
+    it("removes null email from profile", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Test User", email: null },
+          summary: "Engineer",
+          experiences: [],
+          skills: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.profile?.email).toBeUndefined();
+      }
+    });
+
+    it("removes null title from profile", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Test User", title: null },
+          summary: "Engineer",
+          experiences: [],
+          skills: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.profile?.title).toBeUndefined();
+      }
+    });
+
+    it("removes empty string email from profile", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Test User", email: "" },
+          summary: "Engineer",
+          experiences: [],
+          skills: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.profile?.email).toBeUndefined();
+      }
+    });
+
+    it("preserves valid non-empty email", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "Test User", email: "test@example.com" },
+          summary: "Engineer",
+          experiences: [],
+          skills: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.optimizedResume.profile?.email).toBe("test@example.com");
+      }
+    });
+
+    it("preserves required name field even when empty", async () => {
+      const groqOutput = {
+        optimizedResume: {
+          profile: { name: "" },
+          summary: "Engineer",
+          experiences: [],
+          skills: [],
+        },
+        changes: [],
+        warnings: [],
+      };
+
+      globalThis.fetch = mockFetchSuccess({
+        choices: [{ message: { content: JSON.stringify(groqOutput) } }],
+      });
+
+      const provider = createProvider();
+      const result = await provider.optimizeResume(MOCK_REQUEST);
+
+      // name is optional in schema but not in OPTIONAL_PROFILE_KEYS,
+      // so it's not deleted by the null-cleanup loop. However stripExtra
+      // keeps it because it's in PROFILE_KEYS. The profile passes validation.
+      expect(result.success).toBe(true);
+    });
+  });
 });

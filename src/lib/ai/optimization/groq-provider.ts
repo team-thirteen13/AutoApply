@@ -382,11 +382,25 @@ export class GroqResumeOptimizationProvider
         delete profile.github;
         delete profile.portfolio;
 
-        // Ensure required field exists
-        if (!profile.title) profile.title = "";
-
-        // Delete null/undefined/empty-string optional fields so .strict() doesn't reject them
-        for (const key of ["phone", "city", "country", "bio", "githubUrl", "linkedinUrl", "portfolioUrl", "address", "tagline", "photoUrl"]) {
+        // Delete null/undefined/empty-string optional fields so .strict() doesn't reject them.
+        // Groq may emit null for any optional field it does not populate.
+        // Zod's .optional() accepts undefined but not null.
+        const OPTIONAL_PROFILE_KEYS = [
+          "title",
+          "email",
+          "phone",
+          "city",
+          "country",
+          "bio",
+          "githubUrl",
+          "linkedinUrl",
+          "portfolioUrl",
+          "address",
+          "location",
+          "tagline",
+          "photoUrl",
+        ] as const;
+        for (const key of OPTIONAL_PROFILE_KEYS) {
           if (profile[key] === null || profile[key] === undefined || profile[key] === "") {
             delete profile[key];
           }
