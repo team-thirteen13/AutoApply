@@ -34,32 +34,70 @@ body {
 }
 
 /* ── Print styles ──────────────────────────────────────────── */
+
+/* A4 page setup */
+@page {
+  size: A4;
+  margin: 10mm;
+}
+
 @media print {
-  body {
+  /* Force white background and black text */
+  body,
+  html {
     background: white !important;
     color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
+  /* Kill all box shadows */
   * {
     box-shadow: none !important;
   }
 
-  /* Hide all application chrome when printing */
+  /* Hide all application chrome (header, nav, sidebars, buttons) */
   .print\:hidden {
     display: none !important;
   }
 
-  /* Ensure proper page breaks */
-  section,
-  .rounded-2xl,
-  .rounded-xl {
+  /* Hide the gradient page background — show only the resume */
+  .print-bg-hide {
+    background: none !important;
+  }
+
+  /* Resume wrapper: constrain to A4 width, remove visual chrome */
+  .print-resume-container {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+  }
+
+  /* Prevent headings from separating from their following content */
+  .print-resume-container h2 {
+    break-after: avoid;
+  }
+
+  /* Prevent item blocks from splitting across pages */
+  .print-resume-container > div > div,
+  .print-resume-container li,
+  .print-resume-container header {
     break-inside: avoid;
   }
 
-  /* Clean print layout */
+  /* Allow page breaks inside long content lists when needed */
+  .print-resume-container ul {
+    break-inside: auto;
+  }
+
+  /* Clean print layout — strip outer page chrome */
   main {
     padding: 0 !important;
     margin: 0 !important;
+    max-width: none !important;
   }
 
   /* Ensure text is visible */
@@ -75,4 +113,23 @@ body {
   .border-slate-100 {
     border-color: #e5e5e5 !important;
   }
+
+  /* Links — show URL for clickable references */
+  a[href]:after {
+    content: none !important;
+  }
+
+  /* Hide any print-only fallback messages */
+  .print-only {
+    display: block !important;
+  }
+
+  .no-print-only {
+    display: none !important;
+  }
+}
+
+/* Screen-only: hide print fallback message */
+.print-only {
+  display: none;
 }

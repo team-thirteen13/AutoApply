@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Pencil, Printer, Download } from "lucide-react";
 import type { ResumeSnapshot } from "@/types/resume";
 import { getResumeAction } from "../../actions";
@@ -22,7 +22,6 @@ export default function PreviewPage() {
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     async function load() {
       try {
@@ -47,6 +46,12 @@ export default function PreviewPage() {
     }
     load();
   }, [id]);
+
+  const handlePrint = useCallback(() => {
+    if (typeof window !== "undefined" && typeof window.print === "function") {
+      window.print();
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -74,8 +79,8 @@ export default function PreviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-violet-50/20 print-bg-hide">
+      {/* Header — hidden during print */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl print:hidden">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-4">
@@ -98,15 +103,15 @@ export default function PreviewPage() {
               Edit
             </Link>
             <button
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
               <Printer className="h-4 w-4" />
-              Print
+              Print / Save as PDF
             </button>
             <button
               disabled
-              aria-label="PDF export coming soon"
+              aria-label="PDF download coming soon"
               className="inline-flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed"
             >
               <Download className="h-4 w-4" />
@@ -119,10 +124,17 @@ export default function PreviewPage() {
         </div>
       </header>
 
-      {/* Preview */}
+      {/* Resume content — print-constrained container */}
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 print:px-0 print:py-0">
-        <ResumePreview snapshot={snapshot ?? {}} />
+        <div className="print-resume-container">
+          <ResumePreview snapshot={snapshot ?? {}} />
+        </div>
       </main>
+
+      {/* Print-only fallback hint — shown in print output if needed */}
+      <div className="print-only text-center text-xs text-slate-500 pt-2">
+        Exported from AutoApply
+      </div>
     </div>
   );
 }
